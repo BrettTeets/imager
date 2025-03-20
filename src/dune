@@ -1,0 +1,3 @@
+(executables
+ (names read_bmp imager)
+ (libraries mappy))
