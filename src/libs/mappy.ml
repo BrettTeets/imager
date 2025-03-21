@@ -93,12 +93,12 @@ module Mappy = struct
   (** [write_rgba i x y r g b a] writes r g b a and *)
   let write_rgba i x y r g b a =
     match i.pixels with
-    | RGBA (rc, bc, gc, ac) -> set rc x y r; set bc x y b; set gc x y g; set ac x y a 
+    | RGBA (rc, gc, bc, ac) -> set rc x y r; set bc x y b; set gc x y g; set ac x y a 
     | _ -> failwith "Nope"
 
   let write_rgb i x y r g b =
     match i.pixels with
-    | RGB (rc, bc, gc) -> set rc x y r; set bc x y b; set gc x y g
+    | RGB (rc, gc, bc) -> set rc x y r; set bc x y b; set gc x y g
     | _ -> failwith "Nope"
 
   let write_grayA i x y  g a =
