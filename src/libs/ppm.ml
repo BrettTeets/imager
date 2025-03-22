@@ -1,6 +1,6 @@
 module type ReadWrite = sig
-  val read : string -> Imagine.Mappy.Mappy.image
-  val write : string -> Imagine.Mappy.Mappy.image -> unit
+  val read : string -> Mappy.Mappy.image
+  val write : string -> Mappy.Mappy.image -> unit
 end
 
 module Ppm : ReadWrite = struct
