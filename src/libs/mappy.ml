@@ -3,35 +3,49 @@
 module Mappy = struct
   open Bigarray
 
-  type map 
-    = (int, int8_unsigned_elt, c_layout) Array2.t
+  (*Currently the main type for storing color information is 8 bit unsigned, the 32 was added for working with angles alongside the pixel for 
+  edge detection.*)
+  type map8 = (int, int8_unsigned_elt, c_layout) Array2.t
+  type mapf = (float, float32_elt, c_layout) Array2.t
 
   (**[create width height] returns a new int array*)
-  let _create width height 
-    = ((Array2.create int8_unsigned c_layout width height):map)
+  let _create8 width height 
+    = ((Array2.create int8_unsigned c_layout width height):map8)
+  
+  (**[create width height] returns a new int array*)
+  let _createF width height 
+    = ((Array2.create float32 c_layout width height):mapf)
   
   (**[get map width height] returns an int at that position. *)
-  let _get (m:map) width height 
-    = Array2.get m width height
+  let _get (m:map8) width height = Array2.get m width height
+  let _getF (m:mapf) width height = Array2.get m width height
 
   (**[set map height width value] sets the value at that cooridinate*)
-  let _set (m:map) h w x 
-    = Array2.set m h w x
+  let _set (m:map8) width height x = Array2.set m width height x
+  let _setF (m:mapf) width height x =  Array2.set m width height x
+
+
 
   (**[fill map color] fills the entire map with a value*)
-  let _fill (m:map) color
+  let _fill (m:map8) color
     = Array2.fill m color
 
-  let _copy (m:map) =
+  let _copy (m:map8) =
     let w, h = Array2.dim1 m, Array2.dim2 m in
-    let nm = _create w h in
+    let nm = _create8 w h in
+    Array2.blit m nm; nm
+
+  let _copyF (m:mapf) =
+    let w, h = Array2.dim1 m, Array2.dim2 m in
+    let nm = _createF w h in
     Array2.blit m nm; nm
 
   type channels =
-  | Grey  of map
-  | GreyA of map * map
-  | RGB   of map * map * map
-  | RGBA  of map * map * map * map
+  | Grey  of map8
+  | GreyA of map8 * map8
+  | RGB   of map8 * map8 * map8
+  | RGBA  of map8 * map8 * map8 * map8
+  | GreyG of map8 * mapf (*This one lets me store both the grayscale color AND the angle of the gradient in the same spot.*)
 
   type image =
   { width   : int
@@ -42,11 +56,11 @@ module Mappy = struct
   (**[create_rgb width height]*)
   let create_rgb ?(alpha=false) ?(max_val=255) width height =
     let pixels =
-      let r = _create width height in
-      let g = _create width height in
-      let b = _create width height in
+      let r = _create8 width height in
+      let g = _create8 width height in
+      let b = _create8 width height in
       if alpha then
-        let a = _create width height in
+        let a = _create8 width height in
         RGBA (r,g,b,a)
       else RGB (r,g,b)
     in
@@ -54,12 +68,16 @@ module Mappy = struct
 
   let create_gray ?(alpha=false) ?(max_val=255) width height =
     let pixels =
-      let g = _create width height in
+      let g = _create8 width height in
       if alpha then
-        let a = _create width height in GreyA (g, a)
+        let a = _create8 width height in GreyA (g, a)
       else Grey g
     in 
     {width ; height ; max_val ; pixels}
+
+  let create_grayG width height =
+    let pixels = GreyG ((_create8 width height), (_createF width height)) in
+    {width ; height; max_val = 255; pixels}
 
   let read_rgba i x y fn =
     match i.pixels with
@@ -89,6 +107,14 @@ module Mappy = struct
         fn g a
     | _ -> failwith "lol"
 
+  let read_grayG i x y fn =
+    match i.pixels with
+    | GreyG(g, f) ->
+        let g = _get g x y in
+        let f = _getF f x y in
+        fn g f
+    | _ -> failwith "lol"
+
   let read_gray i x y fn =
     match i.pixels with
     | Grey(g) ->
@@ -112,6 +138,11 @@ module Mappy = struct
     | GreyA (gc, ac) -> _set gc x y g; _set ac x y a 
     | _ -> failwith "Nope"
 
+  let write_grayG i x y  g f =
+    match i.pixels with
+    | GreyG (gc, ff) -> _set gc x y g; _setF ff x y f 
+    | _ -> failwith "Nope"
+
   let write_gray i x y  g =
     match i.pixels with
     | Grey (gc) -> _set gc x y g 
@@ -123,7 +154,8 @@ module Mappy = struct
     | RGBA (rr, gg, bb, aa) -> RGBA (_copy rr, _copy gg, _copy bb, _copy aa)
     | RGB (rr, gg, bb) -> RGB (_copy rr, _copy gg, _copy bb)
     | GreyA (gg, aa) -> GreyA (_copy gg, _copy aa)
-    | Grey (gg) -> Grey (_copy gg))}
+    | Grey (gg) -> Grey (_copy gg)
+    | GreyG (gg, rr) -> GreyG (_copy gg, _copyF rr))}
     
 
   let _readRGB_to_gray r g b =
@@ -140,7 +172,7 @@ module Mappy = struct
     (*We are creating a image with a gray channel here then using the recursive function to gray it.*)
     let n = create_gray i.width i.height in _grayscale i n 0 0
 
-  let _kernel_help (m:map) k x y i =
+  let _kernel_help (m:map8) k x y i =
     (_get m x y * List.nth k i)
 
   let read_kernel_3_x_3 i x y k = match i.pixels with
@@ -148,6 +180,18 @@ module Mappy = struct
                  + (_kernel_help gg k (x-1)  y    3) + (_kernel_help gg k x  y    4) + (_kernel_help gg k (x+1)  y    5)
                  + (_kernel_help gg k (x-1) (y+1) 6) + (_kernel_help gg k x (y+1) 7) + (_kernel_help gg k (x+1) (y+1) 8)
     | _ -> failwith "Please use a graysacle image."
+
+  let rec apply_kernel size m kernel c x y =
+    if c = size*size then 0 else 
+    let aid = size / 2 in (*so for 3/2 this is 1 and for 5/2 this is 2, turn it into neg to get the top right corner of the kernel.*)
+    let row = c mod size in (*so for 3 0 1 2 are 0 1 2 as are 3 4 and 5 and 6 7 8.*)
+    let column = c / size in (*so for 3 0 3 6 are 0, 1 4 7 are 1 and 2 5 8 are 2*)
+    (_kernel_help m kernel (x-aid+row) (y-aid+column) c) + (apply_kernel size m kernel (c+1) x y)
+        
+  (**[read_kernel size image kernel x y] size must be 3 5 or 7. returns an int.*)
+  let read_kernel size image kernel x y = match image.pixels with
+    | Grey (gg) -> apply_kernel size gg kernel 0 x y
+    | _ -> failwith "Please use a grayscale image."
     
   let read_kernel_5_x_5 i x y k = match i.pixels with
     | Grey (gg) -> let kh = _kernel_help gg k in 
@@ -157,6 +201,9 @@ module Mappy = struct
       + (kh (x-2) (y+1) 15) + (kh (x-1) (y+1) 16) + (kh x (y+1) 17) + (kh (x+1) (y+1) 18) + (kh (x+2) (y+1) 19)
       + (kh (x-2) (y+2) 20) + (kh (x-1) (y+2) 21) + (kh x (y+2) 22) + (kh (x+1) (y+2) 23) + (kh (x+2) (y+2) 24)
     | _ -> failwith "Please use a grayscale image."
+
+
+
     
 
 end

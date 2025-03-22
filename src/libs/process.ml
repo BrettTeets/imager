@@ -13,10 +13,18 @@ module Process = struct
                    7;26;41;26;7;
                    4;16;26;16;4;
                    1; 4; 7; 4;1;] (*normalize by dividing by 273*)
+  
+  let guassian7 = [0;  0;  1;   2;  1;  0; 0;
+                   0;  3; 13;  22; 13;  3; 0;
+                   1; 13; 59;  97; 59; 13; 1;
+                   2; 22; 97; 159; 97; 22; 2;
+                   1; 13; 59;  97; 59; 13; 1;
+                   0;  3; 13;  22; 13;  3; 0;
+                   0;  0;  1;   2;  1;  0; 0;] (*normalize by 1003*)
 
   let rec _kernel3 i p x y k n =
     if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_gray p x y (read_gray i x y (fun x -> x)) else 
-    write_gray p x y ((read_kernel_3_x_3 i x y k)/n);
+    write_gray p x y ((read_kernel 3 i k x y)/n);
     if x < i.width-1 then _kernel3 i p (x+1) y k n else
       if y < i.height-1 then _kernel3 i p 0 (y+1) k n else
         p 
@@ -31,14 +39,29 @@ module Process = struct
     write_gray p x y (_sobel_help i x y);
     if x < i.width-1 then _sobel i p (x+1) y else
       if y < i.height-1 then _sobel i p 0 (y+1) else
-        p 
+        p;;
+  
+  let _canny i p x y =
+    if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_grayG p x y (read_gray i x y (fun x -> x)) else
+      failwith "potato"
+    ;;
+
   
   let rec _kernel5 i p x y k n =
     if x = 0 || x = 1 || x = i.width-1 || x = i.width-2 || y = 0 || y = 1|| y = i.height-1 || y = i.height-2 then write_gray p x y (read_gray i x y (fun x -> x)) else 
-    write_gray p x y ((read_kernel_5_x_5 i x y k)/n);
+    write_gray p x y ((read_kernel 5 i k x y)/n);
     if x < i.width-1 then _kernel5 i p (x+1) y k n else
       if y < i.height-1 then _kernel5 i p 0 (y+1) k n else
-        p 
+        p;;
+
+  let rec _kernel7 i p x y k n =
+    if x = 0 || x = 1 || x = 2 || x = i.width-1 || x = i.width-2 || x = i.width-3 ||
+      y = 0 || y = 1 || y = 2 || y = i.height-1 || y = i.height-2 || y = i.height-3 
+    then write_gray p x y (read_gray p x y (fun x -> x)) else
+      write_gray p x y ((read_kernel 7 i k x y)/n);
+      if x < i.width-1 then _kernel7 i p (x+1) y k n else
+        if y < i.height-1 then _kernel7 i p 0 (y+1) k n else
+          p
 
   let blur (i:image) = 
     let nm = create_gray i.width i.height in
@@ -47,6 +70,10 @@ module Process = struct
   let blur5 (i:image) =
     let nm = create_gray i.width i.height in
     _kernel5 i nm 0 0 guassian5 273
+
+  let blur7 (i:image) =
+    let nm = create_gray i.width i.height in
+    _kernel7 i nm 0 0 guassian7 1003
 
   let sharpen (i:image) = 
     let nm = create_gray i.width i.height in
@@ -60,6 +87,9 @@ module Process = struct
     let nm = create_gray i.width i.height in
     _sobel i nm 0 0 
   
+  let detect_canny (i:image) = 
+    let nm = create_grayG i.width i.height in
+    _canny i nm 0 0 
   
 
   
