@@ -6,7 +6,7 @@ end
 module Ppm : ReadWrite = struct
   open Mappy.Mappy
 
-  let rec _readPPM ic i w h =
+  let rec _readPPM ic (i:image) w h =
     let rgb = Bytes.create 3 in
     ignore @@ In_channel.really_input ic rgb 0 3;
     write_rgb i w h (Bytes.get_uint8 rgb 0) (Bytes.get_uint8 rgb 1) (Bytes.get_uint8 rgb 2);
@@ -44,14 +44,14 @@ module Ppm : ReadWrite = struct
     Bytes.set_uint8 bytes 2 b;
     bytes
 
-  let rec _writePPM oc image width height =
+  let rec _writePPM oc (image:image) width height =
     let rgb = read_rgb image width height readRGBtoBytes in
     Out_channel.output_bytes oc rgb;
     if width < image.width-1 then _writePPM oc image (width+1) height else
       if height < image.height-1 then _writePPM oc image 0 (height+1) else
         ()
 
-  let write path image =
+  let write path (image:image) =
     let oc = Out_channel.open_bin path in
     Out_channel.output_string oc ("P6\n" ^ string_of_int image.width ^ " " ^ string_of_int image.height ^ "\n255\n");
     _writePPM oc image 0 0

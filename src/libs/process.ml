@@ -34,7 +34,7 @@ module Process = struct
                    0.;  3.; 13.;  22.; 13.;  3.; 0.;
                    0.;  0.;  1.;   2.;  1.;  0.; 0.;] (*normalize by 1003*)
 
-  let rec _kernel3 i p x y k n =
+  let rec _kernel3 (i:image) p x y k n =
     if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_gray p x y (read_gray i x y (fun x -> x)) else 
     write_gray p x y ((read_kernel 3 i k x y)/n);
     if x < i.width-1 then _kernel3 i p (x+1) y k n else
@@ -49,7 +49,7 @@ module Process = struct
     let n = int_of_float @@ Float.sqrt ((Float.pow (float_of_int @@ read_kernel 3 i edge_h x y ) 2.) +. (Float.pow (float_of_int @@ read_kernel 3 i edge_v x y) 2.)) in
     if n > 255 then 255 else n
 
-  let rec _sobel i p x y =
+  let rec _sobel (i:image) p x y =
     if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_gray p x y (read_gray i x y (fun x -> x)) else 
     write_gray p x y (_sobel_help i x y);
     if x < i.width-1 then _sobel i p (x+1) y else
@@ -67,7 +67,7 @@ module Process = struct
 
   let _helperfff x _ = x
   
-  let rec _sobel_with_theta i p x y =
+  let rec _sobel_with_theta (i:image) p x y =
     if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_proc2 p x y (read_Proc2 i x y _helperfff) 0. else (
       let grad_x = read_kernelF 3 i edge_hf x y in  write_debug ("gx: " ^ string_of_float grad_x ^ " " );
       let grad_y = read_kernelF 3 i edge_vf x y in  write_debug ("gy: " ^ string_of_float grad_y ^ " " );
@@ -78,11 +78,11 @@ module Process = struct
       if y < i.height-1 then _sobel_with_theta i p 0 (y+1) else
         p;;
 
-  let _supress i p x y r q =
+  let _supress (i:image) p x y r q =
     let v = (read_gray i x y _direct) in
     if (v >= q  && v >= r) then write_gray p x y (v) else write_gray p x y 0
 
-  let rec non_max_suppression i p x y =
+  let rec non_max_suppression (i:image) (p:image) x y =
     if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_gray p x y (read_gray i x y (fun x -> x)) else 
     (let _, theta = read_grayG i x y (fun x y -> x, y) in
     let angle = (theta *. 180. /. Float.pi) in
@@ -103,14 +103,14 @@ module Process = struct
 
 
   
-  let rec _kernel5 i p x y k n =
+  let rec _kernel5 (i:image) (p:image) x y k n =
     if x = 0 || x = 1 || x = i.width-1 || x = i.width-2 || y = 0 || y = 1|| y = i.height-1 || y = i.height-2 then write_gray p x y (read_gray i x y (fun x -> x)) else 
     write_gray p x y ((read_kernel 5 i k x y)/n);
     if x < i.width-1 then _kernel5 i p (x+1) y k n else
       if y < i.height-1 then _kernel5 i p 0 (y+1) k n else
         p;;
 
-  let rec _kernel7 i p x y k n =
+  let rec _kernel7 (i:image) p x y k n =
     if x = 0 || x = 1 || x = 2 || x = i.width-1 || x = i.width-2 || x = i.width-3 ||
       y = 0 || y = 1 || y = 2 || y = i.height-1 || y = i.height-2 || y = i.height-3 
     then write_gray p x y (read_gray i x y (fun x -> x)) else
@@ -119,7 +119,7 @@ module Process = struct
         if y < i.height-1 then _kernel7 i p 0 (y+1) k n else
           p
 
-  let rec _kernel7F i p x y k n =
+  let rec _kernel7F (i:image) p x y k n =
     if x = 0 || x = 1 || x = 2 || x = i.width-1 || x = i.width-2 || x = i.width-3 ||
       y = 0 || y = 1 || y = 2 || y = i.height-1 || y = i.height-2 || y = i.height-3 
     then write_proc2 p x y (read_gray i x y (fun x -> float_of_int x)) 0. else
@@ -167,7 +167,6 @@ module Process = struct
     (*ignore @@*) _sobel_with_theta i nm 0 0
     (* let nn = create_gray i.width i.height in
     non_max_suppression nm nn 0 0 *)
-  
 
   
 end

@@ -8,6 +8,8 @@ module Mappy = struct
   type map8 = (int, int8_unsigned_elt, c_layout) Array2.t
   type mapf = (float, float32_elt, c_layout) Array2.t
 
+
+
   (**[create width height] returns a new int array*)
   let _create8 width height 
     = ((Array2.create int8_unsigned c_layout width height):map8)
@@ -41,12 +43,12 @@ module Mappy = struct
     Array2.blit m nm; nm
 
   type channels =
-  | Grey  of map8
-  | GreyA of map8 * map8
-  | RGB   of map8 * map8 * map8
-  | RGBA  of map8 * map8 * map8 * map8
-  | GreyG of map8 * mapf (*This one lets me store both the grayscale color AND the angle of the gradient in the same spot.*)
-  | Proc2 of mapf * mapf
+  | Grey    of map8
+  | GreyA   of map8 * map8
+  | RGB     of map8 * map8 * map8
+  | RGBA    of map8 * map8 * map8 * map8
+  | GreyG   of map8 * mapf (*This one lets me store both the grayscale color AND the angle of the gradient in the same spot.*)
+  | Proc2   of mapf * mapf
 
   type image =
   { width   : int
@@ -253,10 +255,95 @@ module Mappy = struct
   | _ -> failwith "Error 21: read_kernelF expects a grayscale float not whatever this is."
     
   
+  (*Simplied types.*)
+
+  (* type grey_F = mapf *)
+  type grayT_F = mapf * mapf
+  type rgb_F = mapf * mapf * mapf
+
+  (** This is a basic grayscale image with a single channel.*)
+  type image_grayscale = { width   : int; height : int; pixels  : mapf }
+
+  (** This is a extended grayscale image with an extra channel to store dirivatives.*)
+  type image_grayscale_with_theta = { width : int; height : int; pixels : grayT_F}
+
+  (** This is an rgb image with three channels for r g b values.*)
+  type image_rgb = { width : int; height : int; pixels : rgb_F}
+
+  type image_type =
+  | RGB_F of image_rgb
+  | GRAY_F of image_grayscale
+  | GRAY_T of image_grayscale_with_theta
+
+  let _createF width height 
+      = ((Array2.create float32 c_layout width height):mapf)
+
+  let _getF (m:mapf) width height = Array2.get m width height
+
+  let _setF (m:mapf) width height x =  Array2.set m width height x
+
+  let _copyF (m:mapf) =
+    let w, h = Array2.dim1 m, Array2.dim2 m in
+    let nm = _createF w h in
+    Array2.blit m nm; nm
+
+  let f_create_empty_rgb height width = 
+    let make () = _createF height width in 
+    {width; height; pixels = (make (), make (), make ())}
+
+  let f_create_empty_gray height width = 
+    let make () = _createF height width in 
+    ({width; height; pixels = (make ())} : image_grayscale)
+
+  let f_create_empty_gray_theta height width = 
+    let make () = _createF height width in 
+    ({width; height; pixels = (make (), make ())} : image_grayscale_with_theta)
+
+  let f_read_gray (image:image_grayscale) fn x y =
+    fn @@ _getF image.pixels x y
+
+  let f_read_gray_theta (image:image_grayscale_with_theta) fn x y = 
+    match image.pixels with
+    | (gg, tt) ->  fn (_getF gg x y) (_getF tt x y)
+
+  let f_read_rgb (image:image_rgb) fn x y = 
+    match image.pixels with
+    | (rr, gg, bb) ->  fn (_getF rr x y) (_getF gg x y) (_getF bb x y)
+
+  let f_write_gray (image:image_grayscale) x y v=
+    _setF image.pixels x y v
+
+  let f_write_gray_theta (image:image_grayscale_with_theta) x y g t=
+    match image.pixels with
+    | (gg, tt) -> (_setF gg x y g); (_setF tt x y t)
+
+  let f_write_rgb (image:image_rgb) x y r g b=
+    match image.pixels with
+    | (rr, gg, bb) -> (_setF rr x y r); (_setF gg x y g); (_setF bb x y b)
+
+  let f_copy_grayscale (image:image_grayscale) =
+    {image with pixels = match image.pixels with | (gg) -> _copyF gg}
+
+  let f_copy_grayscale_theta (image:image_grayscale_with_theta) =
+    {image with pixels = match image.pixels with | (gg, tt) -> (_copyF gg, _copyF tt)}
+
+  let f_copy_rgb (image:image_rgb) =
+    {image with pixels = match image.pixels with | (rr, gg, bb) -> (_copyF rr, _copyF gg, _copyF bb)}
 
 
+  (** [apply_kernel_grayscale size image kernel x y] size of the kernel is 3 5 or 7, image must be grayscale, kernel must be of floats, x and y is the center point.
+  returns the the result of apply the kernel to the given image. Does not overwrite.*)
+  let rec f_apply_kernel_grayscale size (image:image_grayscale_with_theta) kernel x y = match image.pixels with
+    | (gg, _) -> _kernel_applicator size gg kernel 0 x y
+  and _kernel_applicator size m kernel c x y =
+    if c = size*size then 0. else 
+    let aid = size / 2 in (*so for 3/2 this is 1 and for 5/2 this is 2, turn it into neg to get the top right corner of the kernel.*)
+    let row = c mod size in (*so for 3 0 1 2 are 0 1 2 as are 3 4 and 5 and 6 7 8.*)
+    let column = c / size in (*so for 3 0 3 6 are 0, 1 4 7 are 1 and 2 5 8 are 2*)
+    (_apply m kernel (x-aid+row) (y-aid+column) c) +. (_kernel_applicator size m kernel (c+1) x y)
+  and _apply (m:mapf) k x y i =    
+    (_getF m x y *. List.nth k i)
 
-    
 
 end
 
