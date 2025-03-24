@@ -6,7 +6,7 @@ module Mappy = struct
   (*Currently the main type for storing color information is 8 bit unsigned, the 32 was added for working with angles alongside the pixel for 
   edge detection.*)
   type map8 = (int, int8_unsigned_elt, c_layout) Array2.t
-  type mapf = (float, float32_elt, c_layout) Array2.t
+  type mapf = (float, float64_elt, c_layout) Array2.t
 
 
 
@@ -16,7 +16,7 @@ module Mappy = struct
   
   (**[create width height] returns a new int array*)
   let _createF width height 
-    = ((Array2.create float32 c_layout width height):mapf)
+    = ((Array2.create float64 c_layout width height):mapf)
   
   (**[get map width height] returns an int at that position. *)
   let _get (m:map8) width height = Array2.get m width height
@@ -276,7 +276,7 @@ module Mappy = struct
   | GRAY_T of image_grayscale_with_theta
 
   let _createF width height 
-      = ((Array2.create float32 c_layout width height):mapf)
+      = ((Array2.create float64 c_layout width height):mapf)
 
   let _getF (m:mapf) width height = Array2.get m width height
 
@@ -287,16 +287,16 @@ module Mappy = struct
     let nm = _createF w h in
     Array2.blit m nm; nm
 
-  let f_create_empty_rgb height width = 
-    let make () = _createF height width in 
+  let f_create_empty_rgb width height = 
+    let make () = _createF width height in 
     {width; height; pixels = (make (), make (), make ())}
 
-  let f_create_empty_gray height width = 
-    let make () = _createF height width in 
+  let f_create_empty_gray width height = 
+    let make () = _createF width height in 
     ({width; height; pixels = (make ())} : image_grayscale)
 
-  let f_create_empty_gray_theta height width = 
-    let make () = _createF height width in 
+  let f_create_empty_gray_theta width height = 
+    let make () = _createF width height in 
     ({width; height; pixels = (make (), make ())} : image_grayscale_with_theta)
 
   let f_read_gray (image:image_grayscale) fn x y =

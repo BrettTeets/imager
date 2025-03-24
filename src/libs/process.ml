@@ -41,6 +41,16 @@ module Process = struct
       if y < i.height-1 then _kernel3 i p 0 (y+1) k n else
         p 
 
+  let _discard_theta_return x _ = x
+  let _discard_grey_return _ y = y
+
+  let rec _kernel_3_floats (i:image_grayscale_with_theta) p x y k n =
+    if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then f_write_gray_theta p x y (f_read_gray_theta i _discard_theta_return x y) 0. else
+      f_write_gray_theta p x y ((f_apply_kernel_grayscale 3 i k x y)/.n) (f_read_gray_theta i _discard_grey_return x y);
+      if x < i.width-1 then _kernel_3_floats i p (x+1) y k n else
+        if y < i.height-1 then _kernel_3_floats i p 0 (y+1) k n else
+          p
+
   let _scale (x:float) =
     ((x -. Float.min_float) /. ((Float.max_float) -. (Float.min_float))) *. 255.;;
 
@@ -66,28 +76,32 @@ module Process = struct
     x *. 180. /. Float.pi
 
   let _helperfff x _ = x
-  
-  let rec _sobel_with_theta (i:image) p x y =
-    if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_proc2 p x y (read_Proc2 i x y _helperfff) 0. else (
-      let grad_x = read_kernelF 3 i edge_hf x y in  write_debug ("gx: " ^ string_of_float grad_x ^ " " );
-      let grad_y = read_kernelF 3 i edge_vf x y in  write_debug ("gy: " ^ string_of_float grad_y ^ " " );
-      let scaled_h = (Float.hypot grad_x grad_y) in write_debug ("sh: " ^ string_of_float scaled_h ^ " " );
-      let theta = Float.atan2 grad_y grad_x in write_debug ("theta: " ^ (string_of_float @@ _to_degrees theta) ^ "\n" ); ();
-      write_proc2 p x y scaled_h theta);
-    if x < i.width-1 then _sobel_with_theta i p (x+1) y else
-      if y < i.height-1 then _sobel_with_theta i p 0 (y+1) else
+
+  let rec _edge_detection_preprocess (i:image_grayscale_with_theta) (p:image_grayscale_with_theta) x y =
+    if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then f_write_gray_theta p x y (f_read_gray_theta i _helperfff x y ) 0. else (
+      let grad_x = f_apply_kernel_grayscale 3 i edge_hf x y in  
+      let grad_y = f_apply_kernel_grayscale 3 i edge_vf x y in 
+      let scaled_h = (Float.hypot grad_x grad_y) in 
+      let theta = Float.atan2 grad_y grad_x in
+      f_write_gray_theta p x y scaled_h theta);
+    if x < i.width-1 then _edge_detection_preprocess i p (x+1) y else
+      if y < i.height-1 then _edge_detection_preprocess i p 0 (y+1) else
         p;;
+  
+  let _direct x y = x , y
 
-  let _supress (i:image) p x y r q =
-    let v = (read_gray i x y _direct) in
-    if (v >= q  && v >= r) then write_gray p x y (v) else write_gray p x y 0
+  let _supress (i:image_grayscale_with_theta) (p:image_grayscale_with_theta) x y r q =
+    let v, t = (f_read_gray_theta i _direct x y ) in
+    if (v >= q  && v >= r) then f_write_gray_theta p x y (v) t else f_write_gray_theta p x y 0. t 
 
-  let rec non_max_suppression (i:image) (p:image) x y =
-    if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_gray p x y (read_gray i x y (fun x -> x)) else 
-    (let _, theta = read_grayG i x y (fun x y -> x, y) in
+  
+
+  let rec non_max_suppression (i:image_grayscale_with_theta) (p:image_grayscale_with_theta) x y =
+    if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then (let a, b = (f_read_gray_theta i _direct x y) in f_write_gray_theta p x y a b ) else 
+    (let _, theta = f_read_gray_theta i _direct x y in
     let angle = (theta *. 180. /. Float.pi) in
     let angle = (if angle < 0. then angle +. 180. else angle) in
-    let _dive = read_gray2 i _direct in
+    let _dive = f_read_gray_theta i _discard_theta_return  in
     match angle with                                         (* r               q*)
     | a when (0. <= a && a < 22.5 ) -> _supress i p x y (_dive x (y-1)) (_dive x (y+1))
     | a when (22.5 <= a && a < 67.5) ->  _supress i p x y (_dive (x-1) (y+1)) (_dive (x+1) (y-1))
@@ -99,6 +113,31 @@ module Process = struct
       if y < i.height-1 then non_max_suppression i p 0 (y+1) else
         p;;
 
+  let rec double_thresholding (i:image_grayscale_with_theta) (p:image_grayscale_with_theta) x y upper lower =
+    (*I dont know what the max and min potential values are that needs to be resolved or clamped somehow.*)
+
+  let value, theta = f_read_gray_theta i _direct x y in
+  if value >= upper then f_write_gray_theta p x y 255. theta else
+    if value >= lower then f_write_gray_theta p x y 50. theta else
+      f_write_gray_theta p x y 0. 0.;
+  if x < i.width-1 then double_thresholding i p (x+1) y upper lower else
+    if y < i.height-1 then double_thresholding i p 0 (y+1) upper lower else
+      p
+
+  let rec hysteresis (i:image_grayscale_with_theta) (p:image_grayscale_with_theta) x y =
+    let value, theta = f_read_gray_theta i _direct x y in
+    if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then f_write_gray_theta p x y value theta else
+      if value < 200. then 
+        if _is_strong_at i (x-1) (y-1) || _is_strong_at i (x) (y-1) || _is_strong_at i (x+1) (y-1) ||
+           _is_strong_at i (x-1) (y)                                || _is_strong_at i (x+1) (y) ||
+           _is_strong_at i (x-1) (y+1) || _is_strong_at i (x) (y+1) || _is_strong_at i (x+1) (y+1)
+          then f_write_gray_theta p x y 255. theta else f_write_gray_theta p x y 0. theta
+      else f_write_gray_theta p x y value theta;
+    if x < i.width-1 then hysteresis i p (x+1) y else
+      if y < i.height-1 then hysteresis i p 0 (y+1) else
+        p
+  and _is_strong_at i x y =
+    let v, _ = f_read_gray_theta i _direct x y in v > 250.
 
 
 
@@ -126,6 +165,17 @@ module Process = struct
       write_proc2 p x y ((read_kernel_to_F 7 i k x y)/.n) 0.;
       if x < i.width-1 then _kernel7F i p (x+1) y k n else
         if y < i.height-1 then _kernel7F i p 0 (y+1) k n else
+          p
+
+  
+
+  let rec _kernel_7_floats (i:image_grayscale_with_theta) p x y k n =
+    if x = 0 || x = 1 || x = 2 || x = i.width-1 || x = i.width-2 || x = i.width-3 ||
+      y = 0 || y = 1 || y = 2 || y = i.height-1 || y = i.height-2 || y = i.height-3 
+    then f_write_gray_theta p x y (f_read_gray_theta i _discard_theta_return x y) 0. else
+      f_write_gray_theta p x y ((f_apply_kernel_grayscale 7 i k x y)/.n) 0.;
+      if x < i.width-1 then _kernel_7_floats i p (x+1) y k n else
+        if y < i.height-1 then _kernel_7_floats i p 0 (y+1) k n else
           p
 
   let blur (i:image) = 
@@ -161,12 +211,23 @@ module Process = struct
   let detect_sobel (i:image) =
     let nm = create_gray i.width i.height in
     _sobel i nm 0 0 
-  
-  let detect_canny (i:image) = 
-    let nm = create_ProcMap i.width i.height in
-    (*ignore @@*) _sobel_with_theta i nm 0 0
-    (* let nn = create_gray i.width i.height in
-    non_max_suppression nm nn 0 0 *)
 
+  let f_blur (i:image_grayscale_with_theta) =
+    let output = f_create_empty_gray_theta i.width i.height in
+      _kernel_7_floats i output 0 0 guassian7F 1003.
+
+  let f_canny (i:image_grayscale_with_theta) =
+    let work = f_create_empty_gray_theta i.width i.height in
+    ignore @@ _edge_detection_preprocess i work 0 0;
+    let work2 = f_create_empty_gray_theta i.width i.height in
+    ignore @@ non_max_suppression work work2 0 0;
+    let work3 = f_create_empty_gray_theta i.width i.height in
+    ignore @@ double_thresholding work2 work3 0 0 50. 200.;
+    let output = f_create_empty_gray_theta i.width i.height in
+    hysteresis work3 output 0 0
+
+    
+    
+    
   
 end
