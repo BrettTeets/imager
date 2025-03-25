@@ -1,9 +1,14 @@
+open Imagine.Bmp
 open Imagine.Ppm
-open Imagine.Process
-open Imagine.Mappy.Mappy
+
+let () = print_endline "Reading: "
+let input = Bmp.read "eevee.bmp" 1200 1800
 
 
-let () = print_endline "reading: "
+let () = print_endline "Writing: "
+let () = Ppm.write "eevee.ppm" input
+
+(* let () = print_endline "reading: "
 let new_image : rgb image = Ppm.read "uncanny.ppm";;
 
 let () = print_endline "graying: "
@@ -20,7 +25,7 @@ let () = print_endline "writing: "
 let () = ignore @@ Ppm.write "grayscale.ppm" gray
 let () = ignore @@ Ppm.write "blurred.ppm" blur
 let () = ignore @@ Ppm.write "supressed.ppm" work
-
+ *)
 
 
 (* let i = read "uncanny.ppm";; *)
