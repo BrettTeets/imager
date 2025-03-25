@@ -242,8 +242,6 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(!_src.empty());
-
     Mat kernel = _kernel.getMat();
     Size ksize = !kernel.empty() ? kernel.size() : Size(3,3);
     anchor = normalizeAnchor(anchor, ksize);

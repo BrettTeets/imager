@@ -1,18 +1,25 @@
-open Imagine.Ppm.Ppm
+open Imagine.Ppm
+open Imagine.Process
+open Imagine.Mappy.Mappy
+
 
 let () = print_endline "reading: "
-let new_image = read_rgb_to_grayscale "uncanny.ppm";;
+let new_image : rgb image = Ppm.read "uncanny.ppm";;
+
+let () = print_endline "graying: "
+
+let gray = gray_of_image new_image
 
 let () = print_endline "Blurring: "
-let blur = Imagine.Process.Process.f_blur new_image
+let blur = Process.blur gray
 let () = print_endline "Edge: "
-let work = Imagine.Process.Process.f_canny blur
+let work = Process.canny blur 200. 50.
 
 (*work*)
 let () = print_endline "writing: "
-let () = ignore @@ write_grayscale "grayscale.ppm" new_image
-let () = ignore @@ write_grayscale "blurred.ppm" blur
-let () = ignore @@ write_grayscale "supressed.ppm" work
+let () = ignore @@ Ppm.write "grayscale.ppm" gray
+let () = ignore @@ Ppm.write "blurred.ppm" blur
+let () = ignore @@ Ppm.write "supressed.ppm" work
 
 
 
