@@ -1,21 +1,32 @@
-open Imagine.Bmp
 open Imagine.Ppm
-
+open Imagine.Mappy.Mappy
+open Imagine.Process
+(* 
 let () = print_endline "Reading: "
 let input = Bmp.read "eevee.bmp" 1200 1800
 
 
 let () = print_endline "Writing: "
-let () = Ppm.write "eevee.ppm" input
+let () = Ppm.write "eevee.ppm" input *)
 
-(* let () = print_endline "reading: "
-let new_image : rgb image = Ppm.read "uncanny.ppm";;
+let () = print_endline "reading: "
+let new_image : rgb image = Ppm.read "eevee.ppm";;
 
 let () = print_endline "graying: "
-
 let gray = gray_of_image new_image
 
-let () = print_endline "Blurring: "
+let () = print_endline "Dilate"
+let dilate = Process.dilation gray
+let () = print_endline "Erode"
+let erode = Process.erosion gray
+let () = print_endline "Denoise"
+let denoised = Process.dilation erode
+
+let () = ignore @@ Ppm.write "dilated.ppm" dilate
+let () = ignore @@ Ppm.write "eroded.ppm" erode
+let () = ignore @@ Ppm.write "noiseless.ppm" denoised
+
+(* let () = print_endline "Blurring: "
 let blur = Process.blur gray
 let () = print_endline "Edge: "
 let work = Process.canny blur 200. 50.
@@ -24,8 +35,7 @@ let work = Process.canny blur 200. 50.
 let () = print_endline "writing: "
 let () = ignore @@ Ppm.write "grayscale.ppm" gray
 let () = ignore @@ Ppm.write "blurred.ppm" blur
-let () = ignore @@ Ppm.write "supressed.ppm" work
- *)
+let () = ignore @@ Ppm.write "supressed.ppm" work *)
 
 
 (* let i = read "uncanny.ppm";; *)

@@ -93,21 +93,21 @@ module Process = struct
 
   let rec erosion (i:gray image) =
     let o = create_gray i.width i.height in
-    _erode i o 1 1
+    _erode i o 2 2
   and _erode i o x y =
-    write_gray o x y (compare_kernel 5 i _compare x y) 0.;
-    if x < i.width-2 then _erode i o (x+1) y else
-      if y < i.width-2 then _erode i o 1 (y+1) else
+    write_gray o x y (compare_kernel 5 i 255. _compare x y) 0.;
+    if x < i.width-3 then _erode i o (x+1) y else
+      if y < i.width-3 then _erode i o 2 (y+1) else
         o
   and _compare (x:float) (acc:float) = x < acc
 
   let rec dilation (i:gray image) =
     let o = create_gray i.width i.height in
-    _dilate i o 1 1
+    _dilate i o 2 2
   and _dilate i o x y =
-    write_gray o x y (compare_kernel 5 i _compare x y) 0.;
-    if x < i.width-2 then _dilate i o (x+1) y else
-      if y < i.width-2 then _dilate i o 1 (y+1) else
+    write_gray o x y (compare_kernel 5 i 0. _compare x y ) 0.;
+    if x < i.width-3 then _dilate i o (x+1) y else
+      if y < i.width-3 then _dilate i o 2 (y+1) else
         o
   and _compare (x:float) (acc:float) = x > acc
 

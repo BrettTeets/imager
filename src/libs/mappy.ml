@@ -96,8 +96,8 @@ module Mappy  = struct
       (_getf m x y *. List.nth k i)
 
     (*The fn should be doing a compare of float float to bool*)
-    let rec compare_kernel size (image:gray image) fn x y = match image.pixels with
-    | `GRAY (gg, _) -> _kernel_applicator size gg fn 0 x y 0.
+    let rec compare_kernel size (image:gray image) start fn x y = match image.pixels with
+    | `GRAY (gg, _) -> _kernel_applicator size gg fn 0 x y start
     and _kernel_applicator size map fn c x y acc =
       if c = size*size then acc else
       let aid = size / 2 in
