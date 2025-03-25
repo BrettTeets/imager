@@ -197,6 +197,8 @@ bool cv::checkChessboard(InputArray _img, Size size)
     const float white_level = 130.f;
     const float black_white_gap = 70.f;
 
+    //erode image into white,
+    //dilate image into black,
     Mat white;
     Mat black;
     erode(img, white, Mat(), Point(-1, -1), erosion_count);
@@ -205,6 +207,8 @@ bool cv::checkChessboard(InputArray _img, Size size)
     bool result = false;
     for(float thresh_level = black_level; thresh_level < white_level && !result; thresh_level += 20.0f)
     {
+        //thesh_level is increasing by 20.0f every attempt.
+        //mat mat, white threshlevel, black threshlevel, output. 
         vector<pair<float, int> > quads;
         fillQuads(white, black, thresh_level + black_white_gap, thresh_level, quads);
         if (checkQuads(quads, size))
@@ -300,4 +304,65 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                kernel.type(), kernel.data, kernel.step, kernel.cols, kernel.rows, anchor.x, anchor.y,
                borderType, borderValue.val, iterations,
                (src.isSubmatrix() && !isolated));
+}
+
+tatic void fillQuads(Mat & white, Mat & black, double white_thresh, double black_thresh, vector<pair<float, int> > & quads)
+{
+    Mat thresh;
+    //One for the white mat
+    {
+        vector< vector<Point> > contours; //created this
+        vector< Vec4i > hierarchy; //create this.
+        //mat, output, theshould value, max_Value, flag
+        threshold(white, thresh, white_thresh, 255, THRESH_BINARY);
+        findContours(thresh, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+        icvGetQuadrangleHypotheses(contours, hierarchy, quads, 1);
+    }
+
+    //one for the black mat.
+    {
+        vector< vector<Point> > contours;
+        vector< Vec4i > hierarchy;
+        threshold(black, thresh, black_thresh, 255, THRESH_BINARY_INV);
+        findContours(thresh, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+        icvGetQuadrangleHypotheses(contours, hierarchy, quads, 0);
+    }
+}
+
+static bool checkQuads(vector<pair<float, int> > & quads, const cv::Size & size)
+{
+    const size_t min_quads_count = size.width*size.height/2;
+    std::sort(quads.begin(), quads.end(), less_pred);
+
+    // now check if there are many hypotheses with similar sizes
+    // do this by floodfill-style algorithm
+    const float size_rel_dev = 0.4f;
+
+    for(size_t i = 0; i < quads.size(); i++)
+    {
+        size_t j = i + 1;
+        for(; j < quads.size(); j++)
+        {
+            if(quads[j].first/quads[i].first > 1.0f + size_rel_dev)
+            {
+                break;
+            }
+        }
+
+        if(j + 1 > min_quads_count + i)
+        {
+            // check the number of black and white squares
+            std::vector<int> counts;
+            countClasses(quads, i, j, counts);
+            const int black_count = cvRound(ceil(size.width/2.0)*ceil(size.height/2.0));
+            const int white_count = cvRound(floor(size.width/2.0)*floor(size.height/2.0));
+            if(counts[0] < black_count*0.75 ||
+               counts[1] < white_count*0.75)
+            {
+                continue;
+            }
+            return true;
+        }
+    }
+    return false;
 }

@@ -15,16 +15,11 @@ let new_image : rgb image = Ppm.read "eevee.ppm";;
 let () = print_endline "graying: "
 let gray = gray_of_image new_image
 
-let () = print_endline "Dilate"
-let dilate = Process.dilation gray
-let () = print_endline "Erode"
-let erode = Process.erosion gray
-let () = print_endline "Denoise"
-let denoised = Process.dilation erode
+let () = print_endline "THresholding: "
+let thresh = Process.threshold gray 120.
 
-let () = ignore @@ Ppm.write "dilated.ppm" dilate
-let () = ignore @@ Ppm.write "eroded.ppm" erode
-let () = ignore @@ Ppm.write "noiseless.ppm" denoised
+let () = print_endline "write"
+let () = ignore @@ Ppm.write "thresh.ppm" thresh
 
 (* let () = print_endline "Blurring: "
 let blur = Process.blur gray
