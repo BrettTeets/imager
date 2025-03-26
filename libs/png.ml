@@ -9,7 +9,13 @@ module Png = struct
     let b = Bytes.create 4 in
     ignore @@ In_channel.really_input ic b 0 4;
     Bytes.get_int32_be b 0 |> Int32.to_int
+  ;;
 
+  let read_uint8 ic =
+    let b = Bytes.create 1 in
+    ignore @@ In_channel.really_input ic b 0 1;
+    Bytes.get_uint8 b 0
+  ;;
 
   let read_checksum ic = discard ic 4
 
@@ -29,19 +35,23 @@ module Png = struct
   let read_IHDR ic _ =
     let width = read_int32 ic in 
     let height = read_int32 ic in
-    let bit = 0 in
-    let color = 0 in
-    let compress = 0 in
-    let filter = 0 in
-    let interlace = 0 in
+    let bit = read_uint8 ic in
+    let color = read_uint8 ic in
+    let compress = read_uint8 ic in
+    let filter = read_uint8 ic in
+    let interlace = read_uint8 ic in
     IHDR { width ; height ; bit ; color; compress ; filter; interlace}
+  let read_sRGB _ = ()
 
   let read_chunk ic =
     let l = read_length ic in
     let h = read_header ic in
-    match h with
+    let c = (match h with
     | "IHDR" -> read_IHDR ic l
-    | _ -> failwith "Not implemented."
+    | _ -> failwith "Not implemented.") in
+    ignore @@ read_checksum ic;
+    c
+  ;;
 
   
 
