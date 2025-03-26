@@ -31,8 +31,10 @@ module Png = struct
 
   type chunk =
   | IHDR of {width: int ; height : int; bit : int; color : int; compress : int ; filter : int ; interlace : int}
+  | SRGB of {color_space : int} (*sRGB*)
+  | GAMA of {gamma : int}
 
-  let read_IHDR ic _ =
+  let read_IHDR ic =
     let width = read_int32 ic in 
     let height = read_int32 ic in
     let bit = read_uint8 ic in
@@ -41,13 +43,17 @@ module Png = struct
     let filter = read_uint8 ic in
     let interlace = read_uint8 ic in
     IHDR { width ; height ; bit ; color; compress ; filter; interlace}
-  let read_sRGB _ = ()
+  let read_sRGB ic =
+    SRGB {color_space = read_uint8 ic}
+
+  
 
   let read_chunk ic =
-    let l = read_length ic in
+    let _ = read_length ic in
     let h = read_header ic in
     let c = (match h with
-    | "IHDR" -> read_IHDR ic l
+    | "IHDR" -> read_IHDR ic
+    | "sRGB" -> read_sRGB ic
     | _ -> failwith "Not implemented.") in
     ignore @@ read_checksum ic;
     c
