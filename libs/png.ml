@@ -52,8 +52,7 @@ module Png = struct
       if In_channel.really_input ic bytes 0 1 |> Option.is_none then Error ("Empty Channel for: " ^ path) else 
       if Bytes.get_uint8 bytes 0 != 89 then Error ("Not a png at " ^ path) else
       if discard ic 7 |> Option.is_none then Error ("End of file reached unexpectedly.") else
-      let l = read_length ic in
-      let h = read_header ic in failwith "Not implemented"
+      failwith "Not implemented"
 
   ;;
 

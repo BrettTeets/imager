@@ -1,5 +1,6 @@
 (executable
- (name imager)
+ (public_name imager)
+ (name main)
  (libraries imagine))
 
  
