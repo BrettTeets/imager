@@ -10,7 +10,7 @@ let () = print_endline "Writing: "
 let () = Ppm.write "eevee.ppm" input *)
 
 let () = print_endline "reading: "
-let new_image : rgb image = Ppm.read "eevee.ppm";;
+let new_image : rgb image = Ppm.read "../../../../dew_really_test.ppm";;
 
 let () = print_endline "graying: "
 let gray = gray_of_image new_image
@@ -19,7 +19,7 @@ let () = print_endline "THresholding: "
 let thresh = Process.threshold gray 120.
 
 let () = print_endline "write"
-let () = ignore @@ Ppm.write "thresh.ppm" thresh
+let () = ignore @@ Ppm.write "../../../thresh.ppm" thresh
 
 (* let () = print_endline "Blurring: "
 let blur = Process.blur gray
