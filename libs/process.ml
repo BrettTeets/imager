@@ -16,18 +16,15 @@ module Process = struct
                    0.;  3.; 13.;  22.; 13.;  3.; 0.;
                    0.;  0.;  1.;   2.;  1.;  0.; 0.;] (*normalize by 1003*)
 
-  let rec kernel_7 (i:gray image) p x y k n =
-    if x = 0 || x = 1 || x = 2 || x = i.width-1 || x = i.width-2 || x = i.width-3 ||
-      y = 0 || y = 1 || y = 2 || y = i.height-1 || y = i.height-2 || y = i.height-3 
-    then write_gray p x y (read_gray i _extract_gray x y) 0. else
+  let rec kernel_7 (i:gray image) p ?(x=3) ?(y=3) k n =
       write_gray p x y ((apply_kernel 7 i k x y)/.n) 0.;
-      if x < i.width-1 then kernel_7 i p (x+1) y k n else
-        if y < i.height-1 then kernel_7 i p 0 (y+1) k n else
+      if x < i.width-4 then kernel_7 i p ~x:(x+1) ~y:y k n else
+        if y < i.height-4 then kernel_7 i p ~x:3 ~y:(y+1) k n else
           p
   
   let blur (i:gray image) =
     let output = create_gray i.width i.height in
-      kernel_7 i output 0 0 _guassian7F 1003.
+      kernel_7 i output _guassian7F 1003.
 
   let rec canny (i:gray image) upper lower =
     let work = create_gray i.width i.height in

@@ -14,7 +14,7 @@ let test1 _ =
   try (
   let a = Mappy.create_gray 10 10 in
   let b = Mappy.create_gray 10 10 in
-  ignore @@ Process.kernel_7 a b 0 0 _guassian7F 1003.);
+  ignore @@ Process.kernel_7 a b _guassian7F 1003.);
   assert_bool "unreachable" true with
   | Invalid_argument _ -> assert_bool "Test 1: out of bounds failure" false
   | _ -> assert_bool "Unknown error." false
