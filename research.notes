@@ -1,0 +1,94 @@
+Camera Calibration:
+The first part of this project is being able to generate the camera calibration matrixs.
+Following along the openCV's implementation of Camera Calibration
+
+
+Broad overiew.
+
+- cv::findchessboardCorners <- image, size, corners, flags
+- cv::cornersubPix <- image, corners, size, size, flags
+- gather objpoints and imgpoints. 
+- make empty cammat, discoef, r and the
+- cv::calibrateCamera <- objpoint, imgpoints, size, cammat, discoef, R, T
+- Now you havewhat you need to undistory.
+
+Find Chessboard Corners:
+https://github.com/opencv/opencv/blob/01ef38dcad65a119204e6d70f553767a7d2ab614/modules/calib3d/src/calibinit.cpp#L648
+
+- Flags and checks
+    //This might only be getting called if you want to check for the presence of a chessboard in the image.
+- cv::checkChessboard <- img, pattern_size
+- cv::ChessboardDector detector <- pattern size
+    - dilate
+    - detector.generateQuads
+    - detector.processQuads
+- if first method failed try a back up method.
+    - equalizeHist
+    - threshold
+    - cvRound
+    - adaptiveThreshold
+    - dilate
+    - detector.generateQuads
+    - detector.processQuads
+- if found then detector.checkBoardMonotony <- outcorners.
+- check if they are too close two image borders.
+- if found do final procress, then cv::cornerSubPix and return.
+
+
+Check Chessboard:
+https://github.com/opencv/opencv/blob/42a132088cfc2060e9ae816bbcf7ebfcab4f1de8/modules/calib3d/src/checkchessboard.cpp#L152
+This is only run for the fast flag,
+
+
+- cv::erode
+- cv::dilate
+- cv::fillQuads
+- cv::checkQuads
+
+fill Quads:
+https://github.com/opencv/opencv/blob/42a132088cfc2060e9ae816bbcf7ebfcab4f1de8/modules/calib3d/src/checkchessboard.cpp#L94
+
+- cv::threshold
+- cv::findContours
+- cv::icvGetQuadrangHypothese
+
+check Quads:
+https://github.com/opencv/opencv/blob/42a132088cfc2060e9ae816bbcf7ebfcab4f1de8/modules/calib3d/src/checkchessboard.cpp#L114
+
+- math
+- cvRound
+
+Find Contours:
+Based on Suzuki algo. Their implementation is to confusing to use.
+
+
+ChessBoardDetector:
+https://github.com/opencv/opencv/blob/01ef38dcad65a119204e6d70f553767a7d2ab614/modules/calib3d/src/calibinit.cpp#L213
+    Generate Quads:
+        - cv::findContours
+        - cv::approxPolyDP
+        - cv::isContourConvex
+        - cv::arclength
+        - cv::contourArea
+
+
+    Process Quads:
+
+        - cv::round
+
+
+Calibrate Camera:
+https://github.com/kipr/opencv/blob/31450d613c0c091c6ad510cf2a42a25edbe01e62/modules/calib3d/src/calibration.cpp#L3400
+takes image, cam mat, coeffs rvecs, tvecs updates them in place and returns reprojEerr
+
+- prepareCameraMatrix
+- prepareDistCoeffs
+- collectCalibrationDAta
+- cv::CalibrateCamera2
+
+return error projection
+
+Calibrate Camera 2:
+https://github.com/kipr/opencv/blob/31450d613c0c091c6ad510cf2a42a25edbe01e62/modules/calib3d/src/calibration.cpp#L1456
+
+- Math
