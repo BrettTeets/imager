@@ -18,7 +18,7 @@ module Process = struct
 
   let rec kernel_7 (i:gray image) p ?(x=3) ?(y=3) k n =
       write_gray p x y ((apply_kernel 7 i k x y)/.n) 0.;
-      if x < i.width-4 then kernel_7 i p ~x:(x+1) ~y:y k n else
+      if x < i.width-4 then kernel_7 i p ~x:(x+1) ~y k n else
         if y < i.height-4 then kernel_7 i p ~x:3 ~y:(y+1) k n else
           p
   
