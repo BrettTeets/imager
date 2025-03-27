@@ -116,8 +116,8 @@ module Png = struct
       if In_channel.really_input ic bytes 0 1 |> Option.is_none then Error ("Empty Channel for: " ^ path) else 
       if Bytes.get_uint8 bytes 0 != 89 then Error ("Not a png at " ^ path) else
       if discard ic 7 |> Option.is_none then Error ("End of file reached unexpectedly.") else
-      let cl = read_chunks in (*This is returning a list of chunks and the pointer is now set to the start of the data stream.*)
-      ()
+      let _ = read_chunks in (*This is returning a list of chunks and the pointer is now set to the start of the data stream.*)
+      failwith "NI" 
 
   ;;
 
