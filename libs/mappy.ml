@@ -6,6 +6,15 @@ module Mappy  = struct
     type map8 = (int, int8_unsigned_elt, c_layout) Array2.t
     type mapf = (float, float32_elt, c_layout) Array2.t
   
+    let _create8 width height = ((Array2.create int8_unsigned c_layout width height):map8)
+    let _get8 (m:map8) x y = Array2.get m x y
+    let _set8 (m:map8) x y v = Array2.set m x y v
+    let _copy8 (m:map8) =
+      let w, h = Array2.dim1 m, Array2.dim2 m in
+      let output = _create8 w h in
+      Array2.blit m output; output
+
+    (*Floating point maps.*)
     let _createf width height = ((Array2.create float32 c_layout width height):mapf)
     let _getf (m:mapf) x y = Array2.get m x y
   
@@ -23,6 +32,8 @@ module Mappy  = struct
       let w, h = Array2.dim1 m, Array2.dim2 m in
       let output = _createf w h in
       Array2.blit m output; output
+
+    
   
     let lums_of_rgb r g b =
       r *. 0.2125 +. g *. 0.7152 +. b *. 0.0722
@@ -32,28 +43,34 @@ module Mappy  = struct
     type rgba = [ | `RGBA of mapf * mapf * mapf * mapf]
     type rgb = [ | `RGB of mapf * mapf * mapf]
     type gray = [ | `GRAY of mapf * mapf ]
+    type binary = [ | `Binary of map8]
   
-    type channel = [ rgb | gray | rgba]
+    type channel = [ rgb | gray | rgba | binary]
   
     type 'a image = {width : int; height : int; pixels : ([< channel] as 'a)} 
   
     let create_rgba width height =
       let make () = _createf width height in
       {width ; height; pixels = `RGBA (make (), make (), make (), make ())}
-  
+    ;;
     let create_rgb width height =
       let make () = _createf width height in
       {width ; height; pixels = `RGB (make (), make (), make ())}
-  
+    ;;
     let create_gray width height =
       let make () = _createf width height in
       {width ; height; pixels = `GRAY (make (), make ())}
+    ;;
+    let create_binary width height = 
+      let make () = _create8 width height in
+      {width; height; pixels = `Binary (make ())}
+    
   
     (*Pixel Level Operations.*)
   
     (**[read_robust i fn x y] Read robust will take in any image and attempt apply fn to it at x and y. An alpha channel will be ignored.
     In the case of grayscale image the gray values will be duplicated thrice.*)
-    let read_robust i fn x y =
+    let read_robust (i:_ image) fn x y =
       match i.pixels with
       | `RGBA (rr, gg, bb, _) | `RGB (rr, gg, bb) -> 
           let r = _getf rr x y in
@@ -61,6 +78,8 @@ module Mappy  = struct
           let b = _getf bb x y in
           fn r g b
       | `GRAY (gg, _) -> let g = _getf gg x y in fn g g g
+      | `Binary (bb) -> let b = if (_get8 bb x y) > 0 then 255. else 0. in fn b b b
+    ;;
   
     (**[write_robust i x y a r g b] Write robust will take any image and attempt to write r g b and optionally a values to it's color channels.
       in the case of grey image it will calculate the luminosity from the given r g b and apply that as the gray value.*)
@@ -69,8 +88,7 @@ module Mappy  = struct
       | `RGBA (rr, gg, bb, aa) -> _setf rr x y r; _setf gg x y g; _setf bb x y b; _setf aa x y a
       | `RGB (rr, gg, bb) -> _setf rr x y r; _setf gg x y g; _setf bb x y b
       | `GRAY(gg, _) -> let v = lums_of_rgb r g b in _setf gg x y v (*Convert rgb to a single luminosity value*)
-
-    
+      | `Binary (bb) -> _set8 bb x y (if r > 0. || b > 0. || g > 0. then 1 else 0) 
   
     let read_gray (i:gray image) fn x y =
       match i.pixels with
@@ -79,6 +97,16 @@ module Mappy  = struct
     let write_gray (i:gray image) x y v t=
       match i.pixels with
       | `GRAY (gg, tt) -> _setf gg x y v; _setf tt x y t
+
+    let read_binary fn (i:binary image) x y =
+      match i.pixels with
+      | `Binary (bb) -> let b = _get8 bb x y in fn b
+    ;;
+
+    let write_binary v (i:binary image)  x y =
+      match i.pixels with
+      | `Binary (bb) -> _set8 bb x y v
+    
   
     (*Kernel level Operations.*)
   
