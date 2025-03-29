@@ -43,18 +43,4 @@ module Process = struct
         o
   and _compare (x:float) (acc:float) = x > acc
 
-  let rec threshold (i:gray image) pivot =
-    let output = create_gray i.width i.height in
-    _thresh i output pivot 0 0
-  and _thresh i o pivot x y =
-    write_gray o x y (_compare i pivot x y) 0.;
-    if x < i.width-1 then _thresh i o pivot (x+1) y else
-      if y < i.height-1 then _thresh i o pivot 0 (y+1) else
-        o
-  and _compare i p x y =
-    let v = read_gray i _extract_gray x y in
-      (* print_string ("Comparing against: " ^ string_of_float v ^ "\n"); *)
-      if v > p then 255. else 0. 
-    
-
 end
