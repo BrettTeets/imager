@@ -1,9 +1,6 @@
 module Process = struct
   open Mappy.Mappy
-
-  let _extract_gray x _ = x
-  let _extract_theta _ y = y
-  let _extract_both x y = x, y 
+  open Kernel
 
   let _guassian7F = [0.;  0.;  1.;   2.;  1.;  0.; 0.;
                    0.;  3.; 13.;  22.; 13.;  3.; 0.;
@@ -12,35 +9,41 @@ module Process = struct
                    1.; 13.; 59.;  97.; 59.; 13.; 1.;
                    0.;  3.; 13.;  22.; 13.;  3.; 0.;
                    0.;  0.;  1.;   2.;  1.;  0.; 0.;] (*normalize by 1003*)
+  ;;
 
-  let rec kernel_7 (i:gray image) p ?(x=3) ?(y=3) k n =
-      write_gray p x y ((apply_kernel 7 i k x y)/.n) 0.;
-      if x < i.width-4 then kernel_7 i p ~x:(x+1) ~y k n else
-        if y < i.height-4 then kernel_7 i p ~x:3 ~y:(y+1) k n else
-          p
+  (*TODO: change the seven to a strong blur, make a 5x5 blur, and a 3x3 weak blur.
+  maybe guassian blur vs adaptive blur in the future?*)
   
-  let blur (i:gray image) =
-    let output = create_gray i.width i.height in
-      kernel_7 i output _guassian7F 1003.
+  let rec blur img =
+    (*instead of a full copy we could do a per pixel copy and handle the edge case of the kernel not fitting.*)
+    let output = copy_gray img in
+      blur_loop img output
+  and blur_loop ?(x=3) ?(y=3) img out =
+    write_gray out x y ((blur_convolution img x y)) 0.;
+    if x < img.width-4 then blur_loop ~x:(x+1) ~y img out else
+      if y < img.height-4 then blur_loop ~x:3 ~y:(y+1) img out else
+        out
+  and blur_convolution img x y = (Kernel.apply_kernel 7 _guassian7F img x y) /. 1003.
 
-  let rec erosion (i:gray image) =
-    let o = create_gray i.width i.height in
-    _erode i o 2 2
-  and _erode i o x y =
-    write_gray o x y (compare_kernel 5 i 255. _compare x y) 0.;
-    if x < i.width-3 then _erode i o (x+1) y else
-      if y < i.width-3 then _erode i o 2 (y+1) else
-        o
-  and _compare (x:float) (acc:float) = x < acc
+  
+  let rec erosion (img:gray image) =
+    let out = create_gray img.width img.height in
+    _erode img out 2 2
+  and _erode img out x y =
+    write_gray out x y (lowest_value img x y) 0.;
+    if x < img.width-3 then _erode img out (x+1) y else
+      if y < img.width-3 then _erode img out 2 (y+1) else
+        out
+  and lowest_value img x y = Kernel.compare_kernel 5 (<) img 255. x y
 
-  let rec dilation (i:gray image) =
-    let o = create_gray i.width i.height in
-    _dilate i o 2 2
-  and _dilate i o x y =
-    write_gray o x y (compare_kernel 5 i 0. _compare x y ) 0.;
-    if x < i.width-3 then _dilate i o (x+1) y else
-      if y < i.width-3 then _dilate i o 2 (y+1) else
-        o
-  and _compare (x:float) (acc:float) = x > acc
+  let rec dilation (img:gray image) =
+    let o = create_gray img.width img.height in
+    _dilate img o 2 2
+  and _dilate img out x y =
+    write_gray out x y (heighest_value img x y ) 0.;
+    if x < img.width-3 then _dilate img out (x+1) y else
+      if y < img.width-3 then _dilate img out 2 (y+1) else
+        out
+  and heighest_value i x y = Kernel.compare_kernel 5 (>) i 0. x y
 
 end

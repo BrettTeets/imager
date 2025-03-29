@@ -106,6 +106,10 @@ module Mappy  = struct
       match i.pixels with
       | `GRAY (gg, tt) -> _setf gg x y v; _setf tt x y t
 
+    let copy_gray (img:gray image) =
+      ((match img.pixels with
+      | `GRAY (gg, tt) -> {img with pixels = `GRAY (_copyf gg, _copyf tt)}):gray image)
+
     let read_binary fn (i:binary image) x y =
       match i.pixels with
       | `Binary (bb) -> let b = _get8 bb x y in fn b
@@ -126,34 +130,6 @@ module Mappy  = struct
     let copy_rgb (img:rgb image) =
       ((match img.pixels with
       | `RGB (rr, gg, bb) -> {img with pixels = `RGB (_copyf rr, _copyf gg, _copyf bb)}):rgb image)
-    
-  
-    (*Kernel level Operations.*)
-  
-    (** [apply_kernel_grayscale size image kernel x y] size of the kernel is 3 5 or 7, image must be grayscale, kernel must be of floats, x and y is the center point.
-    returns the the result of apply the kernel to the given image. Does not overwrite.*)
-    let rec apply_kernel size (image:gray image) kernel x y = match image.pixels with
-      | `GRAY (gg, _) -> _kernel_applicator size gg kernel 0 x y
-    and _kernel_applicator size m kernel c x y =
-      if c = size*size then 0. else 
-      let aid = size / 2 in (*so for 3/2 this is 1 and for 5/2 this is 2, turn it into neg to get the top right corner of the kernel.*)
-      let row = c mod size in (*so for 3 0 1 2 are 0 1 2 as are 3 4 and 5 and 6 7 8.*)
-      let column = c / size in (*so for 3 0 3 6 are 0, 1 4 7 are 1 and 2 5 8 are 2*)
-      (_apply m kernel (x-aid+row) (y-aid+column) c) +. (_kernel_applicator size m kernel (c+1) x y)
-    and _apply (m:mapf) k x y i =    
-      (_getf m x y *. List.nth k i)
-
-    (*The fn should be doing a compare of float float to bool*)
-    let rec compare_kernel size (image:gray image) start fn x y = match image.pixels with
-    | `GRAY (gg, _) -> _kernel_applicator size gg fn 0 x y start
-    and _kernel_applicator size map fn c x y acc =
-      if c = size*size then acc else
-      let aid = size / 2 in
-      let row = c mod size in
-      let column = c / size in
-      let v = _getf map (x-aid+row) (y-aid+column) in
-      if fn v acc then _kernel_applicator size map fn (c+1) x y v else _kernel_applicator size map fn (c+1) x y acc
-
 
   let rec _loop ?(x=0) ?(y=0) i o fn =
     fn i o x y;

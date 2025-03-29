@@ -1,5 +1,6 @@
 module Canny = struct
 open Mappy.Mappy
+open Kernel
 
   let _extract_gray x _ = x
   let _extract_theta _ y = y
@@ -23,13 +24,15 @@ open Mappy.Mappy
   let rec edge_detection_preprocess i o = 
     _loop_3 i o inner outer
   and inner i o x y =
-    let grad_x = apply_kernel 3 i edge_hf x y in  
-    let grad_y = apply_kernel 3 i edge_vf x y in 
+    let grad_x = change_in_x i x y in  
+    let grad_y = change_in_y i x y in 
     let scaled_h = (Float.hypot grad_x grad_y) in 
     let theta = Float.atan2 grad_y grad_x in
     write_gray o x y scaled_h theta
   and outer i o x y =
     write_gray o x y (read_gray i _extract_gray x y ) 0.
+  and change_in_x = Kernel.apply_kernel 3 edge_hf 
+  and change_in_y = Kernel.apply_kernel 3 edge_vf
   ;;
 
   let rec non_max_suppression i o =
@@ -81,15 +84,15 @@ open Mappy.Mappy
 
   (*Main function to call for canny edge detection.*)
   (**[canny image upper lower] returns a grayscale image withe edges highlighted.*)
-  let rec canny (i:gray image) upper lower =
-    let left = create_gray i.width i.height in
-    let right = create_gray i.width i.height in
-    ignore @@ edge_detection_preprocess i left; (*Writes the preprocess into left.*)
+  let canny (img:gray image) upper lower =
+    let left = create_gray img.width img.height in
+    let right = create_gray img.width img.height in
+    ignore @@ edge_detection_preprocess img left; (*Writes the preprocess into left.*)
     ignore @@ non_max_suppression left right; (*writes the max suppression into right.*)
     ignore @@ double_thresholding right left upper lower; (*writes the double threshould into left.*)
     hysteresis left right (*Finally applies the hysteresis to right and returns that.*)
 
-  and _edge_detection_preprocess (i:gray image) (p:gray image) x y =
+  (* and _edge_detection_preprocess (i:gray image) (p:gray image) x y =
     if x = 0 || x = i.width-1 || y = 0 || y = i.height-1 then write_gray p x y (read_gray i _extract_gray x y ) 0. else (
       let grad_x = apply_kernel 3 i edge_hf x y in  
       let grad_y = apply_kernel 3 i edge_vf x y in 
@@ -140,7 +143,7 @@ open Mappy.Mappy
       if y < i.height-1 then _hysteresis i p 0 (y+1) else
         p
   and _is_strong_at i x y =
-    let v, _ = read_gray i _extract_both x y in v > 250.
+    let v, _ = read_gray i _extract_both x y in v > 250. *)
 
 
 
