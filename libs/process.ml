@@ -1,6 +1,7 @@
 module Process = struct
   open Mappy.Mappy
   open Kernel
+  
 
   let _guassian7F = [0.;  0.;  1.;   2.;  1.;  0.; 0.;
                    0.;  3.; 13.;  22.; 13.;  3.; 0.;
@@ -10,6 +11,7 @@ module Process = struct
                    0.;  3.; 13.;  22.; 13.;  3.; 0.;
                    0.;  0.;  1.;   2.;  1.;  0.; 0.;] (*normalize by 1003*)
   ;;
+  let _guassian7F = List.map (fun x -> x /. 1003.) _guassian7F (*Fun bit of performance, went from 1000 ms to do a blur, to 900 ms to do blur with this. With a typical 700 by 700 img*)
 
   (*TODO: change the seven to a strong blur, make a 5x5 blur, and a 3x3 weak blur.
   maybe guassian blur vs adaptive blur in the future?*)

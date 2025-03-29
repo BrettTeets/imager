@@ -11,7 +11,11 @@ let () = print_endline "graying: "
 let gray = gray_of_image new_image
 
 let () = print_endline "Blur: "
+let t1 = Sys.time () 
+let () = print_float t1; print_newline ()
 let blur = Process.blur gray
+let t2 = Sys.time ()
+let () = print_float t2
 
 let () = print_endline "threshing without blur: "
 let binary_1 = Threshold.threshold gray 125. 
