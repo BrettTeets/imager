@@ -45,7 +45,7 @@ module Mappy  = struct
     type gray = [ | `GRAY of mapf * mapf ]
     type binary = [ | `Binary of map8]
   
-    type channel = [ rgb | gray | rgba | binary]
+    type channel = [ rgb | gray | rgba | binary ]
   
     type 'a image = {width : int; height : int; pixels : ([< channel] as 'a)} 
   
@@ -89,7 +89,15 @@ module Mappy  = struct
       | `RGB (rr, gg, bb) -> _setf rr x y r; _setf gg x y g; _setf bb x y b
       | `GRAY(gg, _) -> let v = lums_of_rgb r g b in _setf gg x y v (*Convert rgb to a single luminosity value*)
       | `Binary (bb) -> _set8 bb x y (if r > 0. || b > 0. || g > 0. then 1 else 0) 
-  
+
+    let copy_robust (img) =
+      match img.pixels with
+      | `GRAY (gg, tt) -> {img with pixels = `GRAY (_copyf gg, _copyf tt)}
+      | `RGBA (rr, gg, bb, aa) -> {img with pixels = `RGBA (_copyf rr, _copyf gg, _copyf bb, _copyf aa)}
+      | `RGB (rr, gg, bb) -> {img with pixels = `RGB (_copyf rr, _copyf gg, _copyf bb)}
+      | `Binary (bb) -> {img with pixels = `Binary (_copy8 bb)}
+    ;;
+
     let read_gray (i:gray image) fn x y =
       match i.pixels with
       | `GRAY (gg, tt) -> let g, t = _getf gg x y, _getf tt x y in fn g t
@@ -106,6 +114,18 @@ module Mappy  = struct
     let write_binary v (i:binary image)  x y =
       match i.pixels with
       | `Binary (bb) -> _set8 bb x y v
+
+    let read_rgb (img:rgb image) x y =
+      match img.pixels with
+      | `RGB (rr, gg, bb) -> _getf rr x y, _getf gg x y, _getf bb x y 
+
+    let write_rgb r g b (i:rgb image) x y  =
+      match i.pixels with
+      | `RGB (rr, gg, bb) -> _setf rr x y r; _setf gg x y g; _setf bb x y b
+
+    let copy_rgb (img:rgb image) =
+      ((match img.pixels with
+      | `RGB (rr, gg, bb) -> {img with pixels = `RGB (_copyf rr, _copyf gg, _copyf bb)}):rgb image)
     
   
     (*Kernel level Operations.*)
