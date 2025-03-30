@@ -3,10 +3,9 @@
 module Mappy  = struct
     open Bigarray
   
-    type map8 = (int, int8_unsigned_elt, c_layout) Array2.t
+    type map8 = (int, int16_signed_elt, c_layout) Array2.t
     type mapf = (float, float32_elt, c_layout) Array2.t
-  
-    let _create8 width height = ((Array2.create int8_unsigned c_layout width height):map8)
+    let _create8 width height = ((Array2.create int16_signed c_layout width height):map8)
     let _get8 (m:map8) x y = Array2.get m x y
     let _set8 (m:map8) x y v = Array2.set m x y v
     let _copy8 (m:map8) =
@@ -145,4 +144,13 @@ module Mappy  = struct
   let gray_of_image (i: _ image) =
     let o = create_gray i.width i.height in
     let t = _loop i o gray_of_point in t
+
+  let rgb_of_point img out x y =
+    let v = read_binary (fun a -> if a > 0 then 255. else 0.) img x y in
+    write_rgb v v v out x y
+
+    let rgb_of_binary img = 
+      let o = create_rgb img.width img.height in
+      _loop img o rgb_of_point
+  
   end

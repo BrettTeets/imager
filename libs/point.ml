@@ -14,5 +14,7 @@ module Point = struct
   let equal (a:t) (b:t) = (fst a = fst b) && (snd b = snd a)
 
   let rugged_equal (a:t option) (b:t) = if Option.is_none a then false else equal (Option.get a) b
+
+  let print_point str a = print_endline @@ str ^ "x: " ^ (string_of_int (fst a)) ^ " y: " ^ (string_of_int (snd a))
   
 end

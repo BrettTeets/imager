@@ -6,7 +6,7 @@ open Mappy.Mappy
   let _compare img thresh x y =
     let v = read_gray img _extract_gray x y in
       (* print_string ("Comparing against: " ^ string_of_float v ^ "\n"); *)
-      if v > thresh then 255 else 0 
+      if v > thresh then 1 else 0 
 
 
   let rec _threshing_loop x y img output thresh = 

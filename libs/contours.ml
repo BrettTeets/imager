@@ -91,9 +91,9 @@ i4, j4 = next Point
   open Point
 
   (*This is the data structure we are returning. It organizes everything into a hiearchy.*)
-  type contour =
+  (* type contour =
   | Empty
-  | Node of {next : contour ; prev : contour ; parent : contour ; child : contour ; points : Point.t list}
+  | Node of {next : contour ; prev : contour ; parent : contour ; child : contour ; points : Point.t list} *)
 
 
   let _extract_gray x _ = x
@@ -155,13 +155,35 @@ i4, j4 = next Point
     | E  -> NE
     | NE -> N
 
+  let turn_clockwise direction = 
+    match direction with
+    | N  -> NE
+    | NE -> E
+    | E  -> SE
+    | SE -> S
+    | S  -> SW
+    | SW -> W
+    | W  -> NW
+    | NW -> N
+
+  let print_direction str direction = 
+    match direction with
+    | N  -> print_endline @@ str ^ "N"
+    | NE -> print_endline @@ str ^ "NE"    
+    | E  -> print_endline @@ str ^ "E"
+    | SE -> print_endline @@ str ^ "SE"    
+    | S  -> print_endline @@ str ^ "S"
+    | SW -> print_endline @@ str ^ "SW"    
+    | W  -> print_endline @@ str ^ "W"
+    | NW -> print_endline @@ str ^ "NW"
+
   let from_a_to_b (a:Point.t) (b:Point.t) =
     let c = Point.sub a b in
     match c with
     | (0, (-1)) -> N
     | (1, (-1)) -> NE
-    | (1, 0) -> E
-    | (1, 1) -> SE
+    | (1, 0) ->  E
+    | (1, 1) ->  SE
     | (0, 1) -> S
     | ((-1), 1) -> SW
     | ((-1), 0) -> W
@@ -169,170 +191,144 @@ i4, j4 = next Point
     | _ -> failwith "a and b are not adjacent."
   ;;
 
-  (*1) starting from i2, j2 (Dont include) look clockwise around i j,
-            find nonzero pixel and denote it i1 j1
-            if no nonzero pixels are found,
-                set fij = -NBD and go to step 4.*)
+  let read_img = read_binary (fun x -> x)
+  let is_outer prev curr = curr = 1 && prev = 0 
+  let is_inner curr next = curr >= 1 && next = 0
 
-  (*This is actually some sort of orientation step.*)
-  (*I dont think fi2j2 should be included in this? Need to see with inner contour*)
-  let rec clockwise_search img fij fi2j2 =
-    let start_dir = from_a_to_b fij fi2j2 in
-    _clockwise_search img fij start_dir start_dir
-  and _clockwise_search img fij initial_dir dir_to_try =
-    let current, next_dir = clockwise fij dir_to_try in (*gets the point in that direction, and returns the next direction to try.*)
-    let neighbor = read_gray img _extract_gray (fst current) (snd current) in
-    if neighbor != 0. then Some current else
-      if next_dir == initial_dir then None else
-        _clockwise_search img fij initial_dir dir_to_try
-  ;;
+  (*This is a generalized method for preform the clockwise and counterclockwise sweeps*)
+  let rec _search fn img curr init_dir curr_dir =
+    let current, next_dir = fn curr curr_dir in
+    let value = read_img img (fst current) (snd current) in
+    if value != 0 then Some current else
+      if next_dir = init_dir then None else
+        _search fn img curr init_dir next_dir
 
-(*STEP 2: 
-(Ediit)
-i , j  = Init Point (One of our starting values.)
-i1, j1 = Anchor Point
-i3, j3 = Pivot Point
-i2, j2 = Prev Point (One of our starting values.)
-i4, j4 = next Point
-    //trace border
-    //Orentation.
-    1) Look around Init-P in a clockwise motion from but not including Prev-p
-        find nonzero pixel and denote it Anchor-P
-        if no nonzero pixels are found,
-            set Init-P = -NBD and go to step 4.
-    2) set Prev-P = Anchor-P and Pivot-P = Init-P
-    //Loop
-    3) Look around Pivot-P in a counterclockwise order from but not including Prev-P
-        find first nonzero pixel and set it to Next-P
-    4) Setting the Pivot-P value
-        if Pivot+east is 0, 
-            then set Pivot-P to -NBD
-        if Pivot+east is >0 AND Pivot-P = 1 
-            then set Pivot-P to NBD
-        otherwise do not change pixel value.
-    5) if in step 2.3 we return to the starting point Next-P = Init-P AND Pivot-P = Anchor-P go to step 3
-        Otherwise set Prev-P = Pivot-P and Pivot-P to Next-P and repeat step 2.3*)
-  let rec find_next_point img prev pivot =
+  let clockwise_search = _search clockwise
+  let counterclockwise_search = _search counterclockwise
+
+  (*This is the process of marking drawn out into its own function.*)
+  let marking img pivot nbd = 
+    (*This is gathering values for marking.*)
+    let east_value = read_img img (fst pivot+1)(snd pivot) in
+    let pivot_value = read_img img (fst pivot) (snd pivot) in
+    (*This is part of marking.*)
+     ( let mark_pivot n = write_binary n img (fst pivot) (snd pivot) in
+      if east_value = 0 then (mark_pivot (~-nbd)) else
+      if east_value > 0 && pivot_value = 1 then mark_pivot nbd else 
+      ()
+    )
+
+
+  (**[find_anchor img curr prev] Find anchor is the first step in the algo. It will sweep in a clockwise direction and find the pixel 'behind' this one
+      in the contour. So when we follow the contour and we see both our initial pixel and our anchor pixel we know we have looped around. Returns none 
+      if it cant find a pixel.*)
+  let find_anchor img curr prev =
+    (*Do not check the direction to the previous pixel, we know that one is blank.*)
+    let dir = from_a_to_b curr prev |> turn_clockwise in clockwise_search img curr dir dir
+
+
+  (**[find_next_point img pivot prev] Find next point will return the next point in the contour if there is one by looking in a counter clockwise direction
+    in front of the contour. The code handles the per pixel task of finding one point. crawl points uses it to crawl all of them. This will return none if 
+    no contour is found. *)
+  let find_next_point img pivot prev =
+    (*Do not check the direction to the previous pixel, we know that one is filled and its behind us. We are crawling along the outer edge, staying on
+    1-points and keeping 0-points to our right.*)
     let dir = from_a_to_b pivot prev |> turn_counterclockwise in
-    _counterclockwise_search img pivot dir dir
-  and _counterclockwise_search img pivot dir init_dir =
-    let current, next_dir = counterclockwise pivot dir in
-    let neighbor = read_gray img _extract_gray (fst current) (snd current) in
-    if neighbor != 0. then Some current else
-      if next_dir == init_dir then None else
-        _counterclockwise_search img pivot next_dir init_dir
+    counterclockwise_search img pivot dir dir
 
-  ;;
 
-    
-  
+  (**[crawl_points img prev pivot nbd init anchor points] Crawl points handles actuall walking the length of the contour after we have have found the anchor.
+     crawl_points halso preforms the task of marking the img so we can accuaretly build the heiarchy. With every recursive call pivot is moved to previous and
+     next is moved to pivot. Slowly walking forward until we reach our starting point or find next point fails to find the next point. *)
+  let rec crawl_points img prev pivot nbd init anchor points =
+    let next = find_next_point img pivot prev in
+    (*This preforms the generalized marking of this pixel. nbd or -nbd depending on the results.*)
+    marking img pivot nbd;
+    (*actually append our pivot to our points.*)
+    let points = pivot :: points in
+    (*THis is the loop with our base case and recursive case.*)
+    if Option.is_none next then points else (*This is probably a line.*)
+      let next = Option.get next in
+      if Point.equal next init && Point.equal pivot anchor then points else (*This is the natural end of our contour.*)
+        crawl_points img pivot next nbd init anchor points 
 
-(*STEP 2: 
-(Ediit)
-i , j  = Init Point (One of our starting values.)
-i1, j1 = Anchor Point
-i3, j3 = Pivot Point
-i2, j2 = Prev Point (One of our starting values.)
-i4, j4 = next Point
-    //trace border
-    //Orentation.
-    1) Look around Init-P in a clockwise motion from but not including Prev-p
-        find nonzero pixel and denote it Anchor-P
-        if no nonzero pixels are found,
-            set Init-P = -NBD and go to step 4.
-    2) set Prev-P = Anchor-P and Pivot-P = Init-P
-    //Loop
-    3) Look around Pivot-P in a counterclockwise order from but not including Prev-P
-        find first nonzero pixel and set it to Next-P
-    4) Setting the Pivot-P value
-        if Pivot+east is 0, 
-            then set Pivot-P to -NBD
-        if Pivot+east is >0 AND Pivot-P = 1 
-            then set Pivot-P to NBD
-        otherwise do not change pixel value.
-    5) if in step 2.3 we return to the starting point Next-P = Init-P AND Pivot-P = Anchor-P go to step 3
-        Otherwise set Prev-P = Pivot-P and Pivot-P to Next-P and repeat step 2.3*)
-  let rec neighborhood_search img init prev nbd=
-    let anchor = clockwise_search img init prev in
-    if Option.is_none anchor then write_gray img (fst init) (snd init) (~-.nbd) 0. else
-      let anchor = Option.get anchor in
+
+  (**[walk_contour img init prev nbd] walk contour sets up finding the anchor point, setting up init, previous and current, and then calls crawl points
+  to progress around the object we found.*)
+  let walk_contour img init prev nbd =
+    let anchor = find_anchor img init prev in 
+    if Option.is_none anchor then 
+      (*Mark this spot and then return, I dont think I should be returning empty here though I will need to check.*)
+      (*Walk contours should return a list of points, this says I could not find a anchor to start the search.*)
+      (write_binary (~-nbd) img (fst init) (snd init); (*init ::*) [])
+    else 
+    (let anchor = Option.get anchor in
       let prev, pivot = anchor, init in
-      let _(*border*) = _inner img prev pivot nbd init anchor [] in 
-    let value = read_gray img _extract_gray (fst init) (snd init) in
-    if value != 1. then (*lnbd = nbd*) () else ()
-  and _inner img prev pivot nbd init anchor border =
-    ((let border = pivot :: border in
-    let next = find_next_point img prev pivot in
-    (*This is part of the marking.*)
-    (let neighbor_value = read_gray img _extract_gray (fst pivot) (snd pivot + 1) in
-    if neighbor_value = 0. then write_gray img (fst pivot) (snd pivot) ~-.nbd 0. else
-      let pivot_value = read_gray img _extract_gray  (fst pivot) (snd pivot) in
-      if neighbor_value > 0. && pivot_value = 1. then  (write_gray img (fst pivot) (snd pivot) nbd 0.; ) else ());
-    (*This is the continuation of the loop with its base case and recursive case.*)
-    if Point.rugged_equal next init && Point.equal pivot anchor then border else
-      _inner img pivot (Option.get next) nbd init anchor border):Point.t list)
+      let points = init :: [] in (*go ahead and push the first point on.*)
+      crawl_points img prev pivot nbd init anchor points)
 
 
+  let rec find_contour_list img =
+    raster_scan img 1 1 [] 1
+  and raster_scan img x y acc nbd =
+    let previous = read_img img (x-1) y in
+    let current = read_img img x y in
+    let next = read_img img (x+1) y in
+    let ll, nnbd = (if (is_outer previous current || is_inner current next) then 
+                      _support img previous current next x y acc (nbd+1)
+              else acc, nbd) in
+    (if x < img.width-2 then  raster_scan img (x+1) y ll nnbd else
+      if y < img.height-2 then raster_scan img 1 (y+1) ll nnbd else
+        ll)
+  and _support img previous current next x y acc nbd =
+    if is_outer previous current then 
+      (let curr = Point.make x y in
+      let prev = Point.make (x-1) y in
+      walk_contour img curr prev nbd :: acc, nbd)
+    else if is_inner current next then
+      (print_endline "Is this being called?";
+      let curr = Point.make x y in
+      let fore = Point.make (x+1) y in
+      walk_contour img curr fore nbd :: acc, nbd)
+    else acc, nbd
+  ;;
+  
+  type contour =
+| Empty
+| Node of {next : contour ; prev : contour ; parent : contour ; child : contour ; points : Point.t list}
 
+  let rec find_contour_tree img =
+    raster_scan img 1 1 Empty 1
+  and raster_scan img x y acc nbd =
+    let output, nnbd = (_support img x y acc nbd) in
+    (if x < img.width-2 then raster_scan img (x+1) y output nnbd else
+      if y < img.width-2 then raster_scan img 1 (y+1) output nnbd else
+        output)
+  and _support img x y acc nbd =
+    let previous = read_img img (x-1) y in
+    let current = read_img img x y in
+    let next = read_img img (x+1) y in
+    if (is_outer previous current || is_inner current next) then (
+      if is_outer previous current then 
+        (let curr = Point.make x y in
+        let prev = Point.make (x-1) y in
+        (build_contour (walk_contour img curr prev nbd) acc, nbd))
+      else if is_inner current next then
+        (print_endline "Is this being called?";
+        let curr = Point.make x y in
+        let fore = Point.make (x+1) y in
+        (build_contour (walk_contour img curr fore nbd) acc, nbd))
+      else acc, nbd
+    )
+    else acc, nbd
+  and build_contour points acc =
+    match acc with
+    | Empty -> Node {next = Empty ; prev = Empty ; parent = Empty ; child = Empty ; points }
+    | Node _ -> Node {next = Empty ; prev = Empty ; parent = Empty ; child = Empty ; points }
 
-      
   ;;
 
 
 
-
-
-
-    
-
-
-
-  (* type cell_response = { rc : Point.t ; d : direction ; s : Point.t option }
-
-  (*The core *)
-  let rec find_contours (img:gray image) =
-    (*x and y start at 1 to avoid the outer edge of the image. nbd and lnbd start at 1 because the algo says so.*)
-    let nbd : int ref = {contents = 1} in
-    let lnbd : int ref = {contents = 1} in
-    _find_contours img 1 1 nbd lnbd
-
-  and _find_contours img (x: int) (y: int) (nbd: int ref) lnbd =
-    let this, prev, next = (read_gray img _extract_gray x y), (read_gray img _extract_gray x (y-1)), (read_gray img _extract_gray x (y+1)) in
-    if this = 1. && prev = 0. then (
-      nbd := (!nbd + 1);
-      let direction = 2 in
-      let contour = _follow_border img x y direction nbd in
-        ()
-    
-       ) else
-    if this >= 1 && next = 0 then 
-      () else
-        ()
-    
-    ; (*Main unit of work*)
-    if x < img.width-2 then _find_contours img (x+1) y nbd lnbd else
-      if y < img.height-2 then _find_contours img 1 (y+1) nbd lnbd else
-        ()
-  and _follow_border img x y (dir:direction) nbd =
-    let curr: Point.t = (Point.make x y) in
-    let exam : Point.t = Point.make x (y-1) in
-    if (read_gray img _extract_gray x y) = 0. then 
-    
-    let exam2, dir, save = _next_cell curr dir in
-    if Option.is_some save then ()
-    if  
-    ()
-    
-    else 2
-  and _next_cell p (dir:direction) =
-    let x = Point.x p in
-    let y = Point.y p in
-    match dir with
-    | Right -> Point.make (x-1) y  , Up    , Some (Point.make x (y+1)) 
-    | Up    -> Point.make x   (y-1), Left  , None          
-    | Left  -> Point.make (x+1) y  , Down  , None          
-    | Down  -> Point.make x   (y+1), Right , None          
-
-  ;; *)
 
 end

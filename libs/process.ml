@@ -11,7 +11,7 @@ module Process = struct
                    0.;  3.; 13.;  22.; 13.;  3.; 0.;
                    0.;  0.;  1.;   2.;  1.;  0.; 0.;] (*normalize by 1003*)
   ;;
-  let _guassian7F = List.map (fun x -> x /. 1003.) _guassian7F (*Fun bit of performance, went from 1000 ms to do a blur, to 900 ms to do blur with this. With a typical 700 by 700 img*)
+  let _guassian7F = List.map (fun x -> x /. 1003.)  _guassian7F (*Fun bit of performance, went from 1000 ms to do a blur, to 900 ms to do blur with this. With a typical 700 by 700 img *)
 
   (*TODO: change the seven to a strong blur, make a 5x5 blur, and a 3x3 weak blur.
   maybe guassian blur vs adaptive blur in the future?*)
@@ -25,7 +25,7 @@ module Process = struct
     if x < img.width-4 then blur_loop ~x:(x+1) ~y img out else
       if y < img.height-4 then blur_loop ~x:3 ~y:(y+1) img out else
         out
-  and blur_convolution img x y = (Kernel.apply_kernel 7 _guassian7F img x y) /. 1003.
+  and blur_convolution img x y = (Kernel.apply_kernel 7 _guassian7F img x y)
 
   
   let rec erosion (img:gray image) =
