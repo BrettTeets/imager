@@ -297,6 +297,13 @@ i4, j4 = next Point
 | Empty
 | Node of {next : contour ; prev : contour ; parent : contour ; child : contour ; points : Point.t list}
 
+  (*This is not needed for the next step of camera calibration I think but it is a nice to have.
+    My current idea is that when scanning the raster image you can treat the numbers like paranthesis
+    to tell when you are in another contour so 8 should pair with -8 and if you find a hole contour
+      while in 8 it is probably 8's inner edge. This idea could let you structure the tree data structure.
+    Will need to do more work to figure out if I even should store it as a real tree or just have indexs into
+      an array. I will say I dont like returning them seperately like openCV.- 3/30/25
+      *)
   let rec find_contour_tree img =
     raster_scan img 1 1 Empty 1
   and raster_scan img x y acc nbd =
