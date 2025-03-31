@@ -247,9 +247,9 @@ i4, j4 = next Point
     (*actually append our pivot to our points.*)
     let points = pivot :: points in
     (*THis is the loop with our base case and recursive case.*)
-    if Option.is_none next then points else (*This is probably a line.*)
+    if Option.is_none next then ((points, false):Line.t) else (*This is probably a line.*)
       let next = Option.get next in
-      if Point.equal next init && Point.equal pivot anchor then points else (*This is the natural end of our contour.*)
+      if Point.equal next init && Point.equal pivot anchor then (points, true) else (*This is the natural end of our contour.*)
         crawl_points img pivot next nbd init anchor points 
 
 
@@ -260,7 +260,7 @@ i4, j4 = next Point
     if Option.is_none anchor then 
       (*Mark this spot and then return, I dont think I should be returning empty here though I will need to check.*)
       (*Walk contours should return a list of points, this says I could not find a anchor to start the search.*)
-      (write_binary (~-nbd) img (fst init) (snd init); (*init ::*) [])
+      (write_binary (~-nbd) img (fst init) (snd init); (*init ::*) ([] , false))
     else 
     (let anchor = Option.get anchor in
       let prev, pivot = anchor, init in
@@ -284,7 +284,7 @@ i4, j4 = next Point
     if is_outer previous current then 
       (let curr = Point.make x y in
       let prev = Point.make (x-1) y in
-      walk_contour img curr prev nbd :: acc, nbd)
+      (walk_contour img curr prev nbd) :: acc, nbd)
     else if is_inner current next then
       (print_endline "Is this being called?";
       let curr = Point.make x y in
@@ -293,9 +293,9 @@ i4, j4 = next Point
     else acc, nbd
   ;;
   
-  type contour =
+  type contourous =
 | Empty
-| Node of {next : contour ; prev : contour ; parent : contour ; child : contour ; points : Point.t list}
+| Node of {next : contourous ; prev : contourous ; parent : contourous ; child : contourous ; points : Point.t list}
 
   (*This is not needed for the next step of camera calibration I think but it is a nice to have.
     My current idea is that when scanning the raster image you can treat the numbers like paranthesis
@@ -304,7 +304,7 @@ i4, j4 = next Point
     Will need to do more work to figure out if I even should store it as a real tree or just have indexs into
       an array. I will say I dont like returning them seperately like openCV.- 3/30/25
       *)
-  let rec find_contour_tree img =
+  (* let rec find_contour_tree img =
     raster_scan img 1 1 Empty 1
   and raster_scan img x y acc nbd =
     let output, nnbd = (_support img x y acc nbd) in
@@ -331,7 +331,7 @@ i4, j4 = next Point
   and build_contour points acc =
     match acc with
     | Empty -> Node {next = Empty ; prev = Empty ; parent = Empty ; child = Empty ; points }
-    | Node _ -> Node {next = Empty ; prev = Empty ; parent = Empty ; child = Empty ; points }
+    | Node _ -> Node {next = Empty ; prev = Empty ; parent = Empty ; child = Empty ; points } *)
 
   ;;
 

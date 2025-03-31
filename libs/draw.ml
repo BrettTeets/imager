@@ -10,7 +10,7 @@ module Draw = struct
 
   let rec draw_point (img:rgb image) point size r g b =
     let out = copy_rgb img in 
-    let x, y = ((Point.x point)), (Point.y point) in
+    let x, y = ((Point.get_x point)), (Point.get_y point) in
     _draw (size+x) (size+y) x x y out r g b
     
   and _draw width height start_x x y (img:rgb image) r g b=
@@ -22,14 +22,14 @@ module Draw = struct
 
   ;;
 
-  let rec draw_line img line = 
+  let rec draw_points img line = 
     match line with
     | [] -> img
-    | h :: t -> let r = (draw_point img h 2 255. 0. 0.) in draw_line r t
+    | h :: t -> let r = (draw_point img h 2 255. 0. 0.) in draw_points r t
 
-  let rec draw_lines img lines =
+  let rec draw_lines img (lines:Line.t list) =
     match lines with
     | [] -> img
-    | h :: t -> let r = draw_line img h in draw_lines r t
+    | h :: t -> let r = draw_points img (Line.get_points h) in draw_lines r t
 
 end
