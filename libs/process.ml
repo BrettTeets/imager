@@ -2,6 +2,9 @@ module Process = struct
   open Mappy.Mappy
   open Kernel
   
+  let blur_kernel_3 = [1.; 2.; 1.;
+                       2.; 4.; 2.; 
+                       1.; 2.; 1.; ] |> List.map (fun x -> x/.16.) 
 
   let _guassian7F = [0.;  0.;  1.;   2.;  1.;  0.; 0.;
                    0.;  3.; 13.;  22.; 13.;  3.; 0.;

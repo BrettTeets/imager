@@ -88,7 +88,7 @@ i4, j4 = next Point
 (*I dont know if it helps but one particular insight I had was this is not a context-free problem, we are not
   finding the contours in isolation with this alogrithm we are finding them in relation to other contours.*)
   open Mappy.Mappy
-  open Point
+  open Shape
 
   (*This is the data structure we are returning. It organizes everything into a hiearchy.*)
   (* type contour =
@@ -112,37 +112,37 @@ i4, j4 = next Point
     | NW (*-x -y*)
 
 
-  let north = Point.make 0 ~-1
-  let northwest = Point.make ~-1 ~-1
-  let west = Point.make ~-1 0
-  let southwest = Point.make ~-1 1
-  let south = Point.make 0 1
-  let southeast = Point.make 1 1
-  let east = Point.make 1 0
-  let northeast = Point.make 1 ~-1
+  let north = Shape.make 0 ~-1
+  let northwest = Shape.make ~-1 ~-1
+  let west = Shape.make ~-1 0
+  let southwest = Shape.make ~-1 1
+  let south = Shape.make 0 1
+  let southeast = Shape.make 1 1
+  let east = Shape.make 1 0
+  let northeast = Shape.make 1 ~-1
 
   let clockwise center direction =
     (*returns the coordinates to the next clockwise pixel based on your center and previous direction.*)
     match direction with
-    | N -> Point.add center north, NE
-    | NE -> Point.add center northeast, E
-    | E -> Point.add center east, SE
-    | SE -> Point.add center southeast, S
-    | S -> Point.add center south, SW
-    | SW -> Point.add center southwest, W
-    | W -> Point.add center west, NW
-    | NW -> Point.add center northwest, N
+    | N -> Shape.add center north, NE
+    | NE -> Shape.add center northeast, E
+    | E -> Shape.add center east, SE
+    | SE -> Shape.add center southeast, S
+    | S -> Shape.add center south, SW
+    | SW -> Shape.add center southwest, W
+    | W -> Shape.add center west, NW
+    | NW -> Shape.add center northwest, N
 
   let counterclockwise center direction = 
     match direction with
-    | N -> Point.add center north, NW
-    | NW -> Point.add center northwest, W
-    | W -> Point.add center west, SW
-    | SW -> Point.add center southwest, S
-    | S -> Point.add center south, SE
-    | SE -> Point.add center southeast, E
-    | E -> Point.add center east, NE
-    | NE -> Point.add center northeast, N
+    | N -> Shape.add center north, NW
+    | NW -> Shape.add center northwest, W
+    | W -> Shape.add center west, SW
+    | SW -> Shape.add center southwest, S
+    | S -> Shape.add center south, SE
+    | SE -> Shape.add center southeast, E
+    | E -> Shape.add center east, NE
+    | NE -> Shape.add center northeast, N
 
   let turn_counterclockwise direction = 
     match direction with
@@ -177,8 +177,8 @@ i4, j4 = next Point
     | W  -> print_endline @@ str ^ "W"
     | NW -> print_endline @@ str ^ "NW"
 
-  let from_a_to_b (a:Point.t) (b:Point.t) =
-    let c = Point.sub a b in
+  let from_a_to_b (a:int Shape.point) (b:int Shape.point) =
+    let c = Shape.sub a b in
     match c with
     | (0, (-1)) -> N
     | (1, (-1)) -> NE
@@ -247,9 +247,9 @@ i4, j4 = next Point
     (*actually append our pivot to our points.*)
     let points = pivot :: points in
     (*THis is the loop with our base case and recursive case.*)
-    if Option.is_none next then ((points, false):Line.t) else (*This is probably a line.*)
+    if Option.is_none next then ((points, false):'a Shape.line) else (*This is probably a line.*)
       let next = Option.get next in
-      if Point.equal next init && Point.equal pivot anchor then (points, true) else (*This is the natural end of our contour.*)
+      if Shape.equal next init && Shape.equal pivot anchor then (points, true) else (*This is the natural end of our contour.*)
         crawl_points img pivot next nbd init anchor points 
 
 
@@ -282,20 +282,20 @@ i4, j4 = next Point
         ll)
   and _support img previous current next x y acc nbd =
     if is_outer previous current then 
-      (let curr = Point.make x y in
-      let prev = Point.make (x-1) y in
+      (let curr = Shape.make x y in
+      let prev = Shape.make (x-1) y in
       (walk_contour img curr prev nbd) :: acc, nbd)
     else if is_inner current next then
       (print_endline "Is this being called?";
-      let curr = Point.make x y in
-      let fore = Point.make (x+1) y in
+      let curr = Shape.make x y in
+      let fore = Shape.make (x+1) y in
       walk_contour img curr fore nbd :: acc, nbd)
     else acc, nbd
   ;;
   
   type contourous =
 | Empty
-| Node of {next : contourous ; prev : contourous ; parent : contourous ; child : contourous ; points : Point.t list}
+| Node of {next : contourous ; prev : contourous ; parent : contourous ; child : contourous ; points : int Shape.point list}
 
   (*This is not needed for the next step of camera calibration I think but it is a nice to have.
     My current idea is that when scanning the raster image you can treat the numbers like paranthesis

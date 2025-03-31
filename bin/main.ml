@@ -32,7 +32,7 @@ let () = ignore @@ Ppm.write "result.ppm" annoted
 let rec rrr lines = 
   match lines with
   | [] -> ()
-  | h :: t -> Imagine.Point.Line.print_line "A" h; rrr t
+  | h :: t -> Imagine.Shape.Shape.print_line "A" h; rrr t
 
 let () = rrr lines
 

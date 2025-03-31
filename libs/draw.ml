@@ -1,6 +1,6 @@
 module Draw = struct
   open Mappy.Mappy
-  open Point
+  open Shape
 
 
 
@@ -10,7 +10,7 @@ module Draw = struct
 
   let rec draw_point (img:rgb image) point size r g b =
     let out = copy_rgb img in 
-    let x, y = ((Point.get_x point)), (Point.get_y point) in
+    let x, y = ((Shape.get_x point)), (Shape.get_y point) in
     _draw (size+x) (size+y) x x y out r g b
     
   and _draw width height start_x x y (img:rgb image) r g b=
@@ -27,9 +27,9 @@ module Draw = struct
     | [] -> img
     | h :: t -> let r = (draw_point img h 2 255. 0. 0.) in draw_points r t
 
-  let rec draw_lines img (lines:Line.t list) =
+  let rec draw_lines img (lines:'a Shape.line list) =
     match lines with
     | [] -> img
-    | h :: t -> let r = draw_points img (Line.get_points h) in draw_lines r t
+    | h :: t -> let r = draw_points img (Shape.get_points h) in draw_lines r t
 
 end
