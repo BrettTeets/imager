@@ -36,18 +36,42 @@ let rec rrr lines =
 
 let () = rrr lines
 
+let () = print_endline "Pruning: "
+let rec pruned_lines lines acc =
+  match lines with
+  | [] -> acc
+  | h :: t -> let nac = (Imagine.Shape.Shape.line_approx_rdp h 0.7:: acc) in pruned_lines t nac
+
+let rec float_lines lines acc =
+  match lines with
+  | [] -> acc
+  | h :: t -> let nac = (Imagine.Shape.Shape.line_f_of_int h :: acc) in float_lines t nac
+
+let rec print_nines lines = 
+    match lines with
+    | [] -> ()
+    | h :: t -> Imagine.Shape.Shape.print_line_f "A" h; print_nines t
+
+let fines = float_lines lines []
+let nines = pruned_lines fines []
+
+let () = print_nines nines 
+
 
 let () = print_endline "Drawing Point: "
 
-(* let doodle = Draw.draw_point colorful (345, 372) 4 255. 0. 0.
-let doodle1 = Draw.draw_point doodle (188, 344) 4 0. 255. 0. *)
+let doodle = Draw.draw_point colorful (80, 249)  0 255. 0. 0. 
+let doodle1 = Draw.draw_point doodle (188, 249)  0 0. 255. 0.
+let doodle2 = Draw.draw_point doodle1 (188, 351) 0 0. 255. 0.
+let doodle3 = Draw.draw_point doodle2 (79, 351)  0 0. 255. 0.
+let doodle4 = Draw.draw_point doodle3 (78, 350)  0 0. 255. 0.
+let doodle5 = Draw.draw_point doodle4 (78, 250)  0 0. 255. 0.
+let doodle6 = Draw.draw_point doodle5 (79, 249)  0 0. 255. 0.
 
 
 (*--------------------------*)
 (* let () = print_endline "write"
 let () = ignore @@ Ppm.write "binary_before_color.ppm" binary
 let () = ignore @@ Ppm.write "colored_after_binary.ppm" colorful*)
-(* 
-let () = ignore @@ Ppm.write "marking.ppm" doodle1  *)
 
-
+let () = ignore @@ Ppm.write "marking.ppm" doodle6

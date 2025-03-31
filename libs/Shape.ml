@@ -45,34 +45,22 @@ module Shape = struct
     (abs_float @@ (x1-.x2) *. (y1-.target_y) -. (y1-.y2)*.(x1-.target_x)) /. hypot (x1-.x2) (y1-.y2)
 
 
-  let rec line_approx_rdp (l:_ point list) e =
-    let a = Array.of_list l in
-    let len = Array.length a in
-    if len <= 0 then [] else loop a 0 len e
-    
-
-  and loop a f l e =
-  let t = l - f in
-  if t < 0 then [] else
-  if t = 0 then [Array.get a f] else
-  let first, last = Array.get a f, Array.get a l in
-  if t = 1 then [first; last] else
-    let perp_fn = perpendicular_distance first last in
-    let dist, index = find_furthest a (f+1) l perp_fn 0. 0 in
-    if dist < e then [first; last] else 
-      (loop a f index e) @ (loop a index l e)
-  and find_furthest a f l fn acc acc2 =
-    if f < l then (let v = fn (Array.get a f) in
-      if v >= acc then find_furthest a (f+1) l fn v f
-      else find_furthest a (f+1) l fn acc acc2)
-    else acc, acc2
-    
+  
 
 
-  ;;
     
 
   type 'a line = 'a point list * bool
+
+  let make_empty_line = (([], false):_ line)
+  let make_line l b = ((l, b):_ line)
+  let rec line_f_of_int (line:int line) = 
+    (((_loop (fst line) [] |> List.rev), snd line):float line)
+  and _loop line acc =
+    match line with
+    | [] -> acc
+    | h :: t -> let n = (point_f_of_int h) :: acc in _loop t n 
+
 
   let get_points l = fst (l:_ line)
 
@@ -95,5 +83,29 @@ module Shape = struct
     match points with
     | [] -> ()
     | h :: t -> print_point_f "\tpoint: " h; _print t
+
+
+  (*Ramer-Douglas-Peucker Algorithm*)
+  let rec line_approx_rdp (list:float line) epsilon =
+    let arr = Array.of_list (fst list) in
+    let len = Array.length arr in
+    if len <= 0 then make_empty_line else let p = fst list |> List.hd in ([p] @ loop arr 0 (len-1) epsilon), snd list
+  and loop a first_index last_index epsilon =
+    print_string @@ "testing: " ^ string_of_int first_index ^ ", " ^ string_of_int last_index;
+  let total = last_index - first_index in
+  if total < 0 then (print_endline "blank:"; []) else
+  if total = 0 then (print_endline "point:"; [Array.get a first_index]) else
+  let first, last = Array.get a first_index, Array.get a last_index in
+  if total = 1 then (print_endline "double:"; [last]) else
+    let perp_fn = perpendicular_distance first last in
+    let dist, index = find_furthest a (first_index+1) last_index perp_fn 0. 0 in
+    if dist < epsilon then (print_endline "cleared:"; [last]) else 
+      (print_endline "break:"; (loop a first_index index epsilon) @ (loop a index last_index epsilon))
+  and find_furthest a f l fn acc acc2 =
+    if f < l then (let v = fn (Array.get a f) in
+      if v >= acc then find_furthest a (f+1) l fn v f
+      else find_furthest a (f+1) l fn acc acc2)
+    else acc, acc2
+  ;;
 
 end
